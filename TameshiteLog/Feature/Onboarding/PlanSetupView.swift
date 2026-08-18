@@ -52,7 +52,7 @@ struct PlanSetupView: View {
 
             footer
         }
-        .background(Color(.systemGroupedBackground))
+        .onboardingBackground()
         .navigationTitle("観察をはじめる")
         .navigationBarTitleDisplayMode(.inline)
         .animation(.snappy, value: step)

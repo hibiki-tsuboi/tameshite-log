@@ -48,6 +48,7 @@ struct OnboardingView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
             }
+            .onboardingBackground()
             .navigationDestination(isPresented: $isSettingUp) {
                 PlanSetupView { hasCompletedOnboarding = true }
             }
