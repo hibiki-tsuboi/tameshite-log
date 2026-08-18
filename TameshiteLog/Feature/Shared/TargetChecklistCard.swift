@@ -34,7 +34,7 @@ struct TargetChecklistCard: View {
                         row(for: target)
                     }
                 }
-                Text("タップで「実施した」→「実施しなかった」→「未記録」と切り替わります。実施した日と実施しなかった日は、経過画面で見くらべられます。")
+                Text(footerText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -69,7 +69,9 @@ struct TargetChecklistCard: View {
             switch self {
             case .untracked: nil
             case .completed: nil
-            case .skipped: "実施しなかった"
+            // 「実施しなかった」とだけ書くと、これが比較の片側として数えられることが画面から読めない。
+            // 押し間違いで × にした人がその場で気づけるよう、状態ではなく結果を書く。
+            case .skipped: "実施しなかった日として比較に使います"
             }
         }
 
@@ -110,6 +112,7 @@ struct TargetChecklistCard: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("\(target.name) を\(mark.accessibilityAction)")
+            .accessibilityValue(mark.caption ?? "")
             .accessibilityAddTraits(isCompleted ? [.isSelected] : [])
 
             if isCompleted, let record {
@@ -127,6 +130,20 @@ struct TargetChecklistCard: View {
             }
         }
         .padding(.vertical, 8)
+    }
+
+    /// 「実施しなかった」が比較に使われることは、× の付いた行そのものが言う。
+    /// まだ 1 つも付いていないあいだだけ、脚注でその比較があることを知らせる。
+    private var footerText: String {
+        let cycle = "タップで「実施した」→「実施しなかった」→「未記録」と切り替わります。"
+        guard !hasSkippedRow else { return cycle }
+        return cycle + "実施した日と実施しなかった日は、経過画面で見くらべられます。"
+    }
+
+    private var hasSkippedRow: Bool {
+        targets.contains { target in
+            record(for: target).map { !$0.isCompleted } ?? false
+        }
     }
 
     private func record(for target: ObservationTarget) -> TargetRecord? {
