@@ -29,9 +29,19 @@ struct PlanSetupView: View {
 
     private static let planSuggestions = ["お腹の調子", "睡眠の経過観察", "肌の調子", "疲れやすさ"]
 
+    // いつもの状態から始めるなら、試すものは数日後に「フェーズを始める」で
+    // 登録すればよく、そのときの方が具体的に決まっている。ここでは聞かない。
+    private var steps: [Step] {
+        wantsBaseline ? [.planName, .baseline] : Step.allCases
+    }
+
+    private var isLastStep: Bool {
+        step == steps.last
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ProgressView(value: Double(step.rawValue + 1), total: Double(Step.allCases.count))
+            ProgressView(value: Double(step.rawValue + 1), total: Double(steps.count))
                 .padding(.horizontal)
                 .padding(.bottom, 8)
 
@@ -111,9 +121,7 @@ struct PlanSetupView: View {
             }
             .pickerStyle(.menu)
 
-            Text(wantsBaseline
-                 ? "登録しておくと、いつもの状態の記録が終わったあと「次のフェーズを始める」からすぐ使えます。"
-                 : "今日から、これを試している期間として記録を始めます。")
+            Text("今日から、これを試している期間として記録を始めます。")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
@@ -136,7 +144,7 @@ struct PlanSetupView: View {
             Button {
                 next()
             } label: {
-                Text(step == .trial ? "はじめる" : "次へ")
+                Text(isLastStep ? "はじめる" : "次へ")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -156,7 +164,8 @@ struct PlanSetupView: View {
     private func next() {
         switch step {
         case .planName: step = .baseline
-        case .baseline: step = .trial
+        case .baseline:
+            if wantsBaseline { createPlan() } else { step = .trial }
         case .trial: createPlan()
         }
     }
@@ -173,13 +182,11 @@ struct PlanSetupView: View {
         let store = ObservationStore(context: context)
         let plan = store.createPlan(name: trimmedPlanName, startDate: .now)
 
-        let trimmedTrial = trialName.trimmingCharacters(in: .whitespaces)
-        let target = trimmedTrial.isEmpty ? nil : store.createTarget(name: trimmedTrial, type: trialType)
-
         if wantsBaseline {
-            // 試すものは登録だけしておき、フェーズは「いつもの状態」から始める。
             store.startPhase(name: "いつもの状態", type: .baseline, on: .now, in: plan)
         } else {
+            let trimmedTrial = trialName.trimmingCharacters(in: .whitespaces)
+            let target = trimmedTrial.isEmpty ? nil : store.createTarget(name: trimmedTrial, type: trialType)
             store.startPhase(
                 name: target?.name ?? "試している期間",
                 type: .intervention,
