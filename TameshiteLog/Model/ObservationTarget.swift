@@ -51,6 +51,10 @@ final class ObservationTarget {
     @Relationship(deleteRule: .cascade, inverse: \TargetRecord.target)
     var records: [TargetRecord] = []
 
+    /// 処方箋などの控え。実施記録と同じく、対象を消したら一緒に消える。
+    @Relationship(deleteRule: .cascade, inverse: \TargetAttachment.target)
+    var attachments: [TargetAttachment] = []
+
     init(name: String, type: TargetType = .medication, note: String = "", createdAt: Date = .now) {
         self.name = name
         self.type = type

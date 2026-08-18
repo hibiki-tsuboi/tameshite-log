@@ -15,6 +15,7 @@ struct TameshiteLogApp: App {
         ObservationTarget.self,
         DailyRecord.self,
         TargetRecord.self,
+        TargetAttachment.self,
         BowelMovement.self,
     ]
 

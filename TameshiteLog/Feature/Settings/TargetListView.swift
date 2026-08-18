@@ -68,6 +68,7 @@ struct TargetEditorView: View {
     @State private var name = ""
     @State private var type: TargetType = .medication
     @State private var note = ""
+    @State private var photos: [TargetPhotoDraft] = []
 
     var body: some View {
         Form {
@@ -85,6 +86,8 @@ struct TargetEditorView: View {
                     .lineLimit(1...4)
             }
 
+            TargetPhotoSection(photos: $photos)
+
             if let target {
                 Section {
                     Button("この観察対象を削除", systemImage: "trash", role: .destructive) {
@@ -92,7 +95,7 @@ struct TargetEditorView: View {
                         dismiss()
                     }
                 } footer: {
-                    Text("削除すると、この対象の実施記録も一緒に消えます。排便やまとめの記録は残ります。")
+                    Text("削除すると、この対象の実施記録と写真も一緒に消えます。排便やまとめの記録は残ります。")
                 }
             }
         }
@@ -111,19 +114,39 @@ struct TargetEditorView: View {
             name = target.name
             type = target.type
             note = target.note
+            photos = target.attachments
+                .sorted { $0.createdAt < $1.createdAt }
+                .map { TargetPhotoDraft(image: $0.image, attachment: $0) }
         }
     }
 
     private func save() {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
+        let store = ObservationStore(context: context)
+        let saved: ObservationTarget
+
         if let target {
             target.name = trimmed
             target.type = type
             target.note = note
+            saved = target
         } else {
-            ObservationStore(context: context).createTarget(name: trimmed, type: type, note: note)
+            saved = store.createTarget(name: trimmed, type: type, note: note)
         }
+
+        applyPhotos(to: saved, store: store)
         dismiss()
+    }
+
+    /// 画面に残っている写真だけを添付として残す。外された既存の添付は消す。
+    private func applyPhotos(to target: ObservationTarget, store: ObservationStore) {
+        let kept = Set(photos.compactMap { $0.attachment?.persistentModelID })
+        for attachment in target.attachments where !kept.contains(attachment.persistentModelID) {
+            store.delete(attachment)
+        }
+        for photo in photos where photo.attachment == nil {
+            store.addAttachment(photo.image, to: target)
+        }
     }
 }
 

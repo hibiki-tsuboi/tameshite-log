@@ -285,6 +285,18 @@ struct ObservationStore {
         context.delete(target)
     }
 
+    /// 観察対象に写真を添える。渡すのは `AttachmentImage.prepared(from:)` を通した画像。
+    @discardableResult
+    func addAttachment(_ image: Data, to target: ObservationTarget, createdAt: Date = .now) -> TargetAttachment {
+        let attachment = TargetAttachment(image: image, createdAt: createdAt, target: target)
+        context.insert(attachment)
+        return attachment
+    }
+
+    func delete(_ attachment: TargetAttachment) {
+        context.delete(attachment)
+    }
+
     // MARK: - 排便記録
 
     func movements(on date: Date) -> [BowelMovement] {

@@ -1,6 +1,7 @@
 #if DEBUG
 import Foundation
 import SwiftData
+import UIKit
 
 /// プレビューと動作確認のための架空データ（30 日分）。
 ///
@@ -69,6 +70,44 @@ enum SampleData {
 
     private static var totalDays: Int { specs.reduce(0) { $0 + $1.days } }
 
+    /// 処方箋を撮った写真の代わりに描く紙。中身は架空で、見え方を確かめるためだけのもの。
+    @MainActor
+    private static func placeholderPaper() -> Data? {
+        let size = CGSize(width: 840, height: 1188)
+        let image = UIGraphicsImageRenderer(size: size).image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+
+            let title = "処方箋（サンプル）"
+            let lines = [
+                "ためしてログ内科",
+                "",
+                "Rp.",
+                "1) コレバイン ミニ83%",
+                "   1回 1包 1日 2回",
+                "   朝食後・夕食後  14日分",
+                "",
+                "2) イリボー錠 5μg",
+                "   1回 1錠 1日 1回  朝食後  14日分",
+            ]
+
+            let titleAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 44),
+                .foregroundColor: UIColor.black,
+            ]
+            title.draw(at: CGPoint(x: 64, y: 72), withAttributes: titleAttributes)
+
+            let bodyAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 34),
+                .foregroundColor: UIColor.darkGray,
+            ]
+            for (index, line) in lines.enumerated() {
+                line.draw(at: CGPoint(x: 64, y: 180 + 52 * index), withAttributes: bodyAttributes)
+            }
+        }
+        return image.jpegData(compressionQuality: 0.8).flatMap(AttachmentImage.prepared(from:))
+    }
+
     @MainActor
     static func populate(_ context: ModelContext, today: Date = .now, calendar: Calendar = .current) {
         let store = ObservationStore(context: context, calendar: calendar)
@@ -76,6 +115,12 @@ enum SampleData {
 
         let targets = ["コレバイン", "イリボー"].reduce(into: [String: ObservationTarget]()) { result, name in
             result[name] = store.createTarget(name: name, type: .medication, note: "")
+        }
+
+        // 添付のある対象を 1 つ作っておく。写真は選ばないと入らないので、
+        // これがないと添付まわりの見え方をサンプルデータから確かめられない。
+        if let target = targets["コレバイン"], let paper = placeholderPaper() {
+            store.addAttachment(paper, to: target)
         }
 
         let todayStart = calendar.startOfDay(for: today)
@@ -225,7 +270,7 @@ extension SampleData {
     static let previewContainer: ModelContainer = {
         let container = try! ModelContainer(
             for: ObservationPlan.self, ObservationPhase.self, ObservationTarget.self,
-            DailyRecord.self, TargetRecord.self, BowelMovement.self,
+            DailyRecord.self, TargetRecord.self, TargetAttachment.self, BowelMovement.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         populate(container.mainContext)
@@ -258,7 +303,7 @@ extension SampleData {
     static let emptyPreviewContainer: ModelContainer = {
         try! ModelContainer(
             for: ObservationPlan.self, ObservationPhase.self, ObservationTarget.self,
-            DailyRecord.self, TargetRecord.self, BowelMovement.self,
+            DailyRecord.self, TargetRecord.self, TargetAttachment.self, BowelMovement.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
     }()
