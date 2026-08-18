@@ -11,6 +11,10 @@ struct MonthCalendarView: View {
 
     @State private var month: Date = Calendar.current.startOfMonth(for: .now)
 
+    /// 「今日」は状態として持つ。理由は `CurrentDayTracker` に書いてある。
+    /// この画面では、今日のマスの印と、開ける日の境目がこの値で決まる。
+    @State private var today = Date.now
+
     private let calendar = Calendar.current
     private var plan: ObservationPlan? { activePlans.first }
 
@@ -35,11 +39,13 @@ struct MonthCalendarView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button("今月", systemImage: "arrow.uturn.backward") {
-                        withAnimation { month = calendar.startOfMonth(for: .now) }
+                        withAnimation { month = calendar.startOfMonth(for: today) }
                     }
-                    .disabled(calendar.isDate(month, equalTo: .now, toGranularity: .month))
+                    // 押せるかどうかと飛び先は同じ「今日」から決める。
+                    .disabled(calendar.isDate(month, equalTo: today, toGranularity: .month))
                 }
             }
+            .tracksCurrentDay($today)
         }
     }
 
@@ -90,15 +96,15 @@ struct MonthCalendarView: View {
         let summaryDays = Set(dailyRecords.filter { !$0.isEmpty }.map { calendar.startOfDay(for: $0.date) })
         let noMovementDays = Set(dailyRecords.filter(\.hadNoBowelMovement).map { calendar.startOfDay(for: $0.date) })
 
-        let today = calendar.startOfDay(for: .now)
+        let todayStart = calendar.startOfDay(for: today)
 
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
             ForEach(days, id: \.self) { day in
                 let cell = DayCell(
                     day: day,
                     isInDisplayedMonth: calendar.isDate(day, equalTo: month, toGranularity: .month),
-                    isToday: calendar.isDateInToday(day),
-                    isFuture: day > today,
+                    isToday: calendar.isDate(day, inSameDayAs: todayStart),
+                    isFuture: day > todayStart,
                     bowelCount: countsByDay[day] ?? 0,
                     hasSummary: summaryDays.contains(day),
                     hadNoBowelMovement: noMovementDays.contains(day),
@@ -107,7 +113,7 @@ struct MonthCalendarView: View {
 
                 // まだ来ていない日は開かせない。開くと記録もまとめも書けてしまい、
                 // 起きていないことが記録として残る。フェーズの帯を今日で止めているのと同じ理由。
-                if day > today {
+                if day > todayStart {
                     cell
                 } else {
                     NavigationLink(value: day) { cell }
@@ -150,7 +156,7 @@ struct MonthCalendarView: View {
     /// 継続中のフェーズは終了日を持たないので、そのままだと未来の日まで色が付いてしまう。
     /// まだ来ていない日は「そのフェーズだった」とは言えないため、今日で打ち切る。
     private func phaseColor(on day: Date) -> Color? {
-        guard let plan, day <= calendar.startOfDay(for: .now) else { return nil }
+        guard let plan, day <= calendar.startOfDay(for: today) else { return nil }
         let phases = plan.orderedPhases
         guard let index = phases.lastIndex(where: { $0.contains(day, calendar: calendar) }) else { return nil }
         return PhasePalette.color(type: phases[index].type, index: index)

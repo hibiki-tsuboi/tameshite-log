@@ -6,15 +6,23 @@ struct TodayView: View {
     @Query(filter: #Predicate<ObservationPlan> { $0.isActive })
     private var activePlans: [ObservationPlan]
 
+    /// 「今日」は body の評価まかせにせず、状態として持つ。理由は `CurrentDayTracker` に書いてある。
+    /// この画面は日付から記録先を決めているので、表示が前日なら記録も前日に入る。
+    @State private var today = Date.now
+
     var body: some View {
         NavigationStack {
             if let plan = activePlans.first {
-                TodayPlanView(plan: plan, day: .now)
+                TodayPlanView(plan: plan, day: today)
+                    // 日付が変わったら作り直す。カードが持っている入力途中の状態が
+                    // 新しい日に引き継がれず、前日ぶんの後片付けも走る。
+                    .id(today)
             } else {
                 NoActivePlanView()
                     .navigationTitle("今日")
             }
         }
+        .tracksCurrentDay($today)
     }
 }
 
