@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+xcuserdata/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+
+# 依存管理ツール（未使用。誤コミット防止）
+Pods/
+Carthage/Build/
+
+# 個人の症状・服薬内容を含む仕様書（公開リポジトリには載せない）
+keika-kansatsu-ios26-codex-prompt.md
