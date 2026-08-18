@@ -124,18 +124,24 @@ struct PlanSetupView: View {
     }
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: 12) {
             if step != .planName {
                 Button("戻る") { back() }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
             }
 
-            Button(step == .trial ? "はじめる" : "次へ") { next() }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .frame(maxWidth: .infinity)
-                .disabled(step == .planName && trimmedPlanName.isEmpty)
+            // 幅を広げるのはボタン本体ではなくラベル側。外側に付けると背景は
+            // 文字幅のままで、広がった枠の中央に浮いて見える。
+            Button {
+                next()
+            } label: {
+                Text(step == .trial ? "はじめる" : "次へ")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(step == .planName && trimmedPlanName.isEmpty)
         }
         .padding()
         .background(.bar)
