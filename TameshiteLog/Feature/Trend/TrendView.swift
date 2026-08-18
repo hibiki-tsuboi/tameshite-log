@@ -13,6 +13,7 @@ struct TrendView: View {
     @Query(sort: \DailyRecord.date) private var dailyRecords: [DailyRecord]
 
     @State private var metric: ObservationMetric = .bowelCount
+    @State private var isExporting = false
 
     private var plan: ObservationPlan? { activePlans.first }
 
@@ -30,6 +31,23 @@ struct TrendView: View {
                 }
             }
             .navigationTitle("経過")
+            .toolbar {
+                if plan != nil {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("書き出す", systemImage: "square.and.arrow.up") { isExporting = true }
+                    }
+                }
+            }
+            .sheet(isPresented: $isExporting) {
+                NavigationStack {
+                    ExportView(initialPlan: plan)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("閉じる") { isExporting = false }
+                            }
+                        }
+                }
+            }
         }
     }
 

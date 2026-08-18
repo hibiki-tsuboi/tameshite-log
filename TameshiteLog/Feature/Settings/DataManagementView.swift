@@ -15,7 +15,15 @@ struct DataManagementView: View {
             } header: {
                 Text("保存場所")
             } footer: {
-                Text("バックアップや他の端末との同期にはまだ対応していません。")
+                Text("他の端末との同期にはまだ対応していません。控えを残すには「書き出し」から CSV を保存してください。")
+            }
+
+            Section {
+                NavigationLink { ExportView() } label: {
+                    Label("書き出し", systemImage: "square.and.arrow.up")
+                }
+            } footer: {
+                Text("記録を PDF・CSV で取り出せます。削除の前にも使えます。")
             }
 
             Section {

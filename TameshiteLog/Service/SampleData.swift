@@ -199,6 +199,20 @@ extension SampleData {
             ?? ObservationPlan(name: "下痢の経過観察")
     }
 
+    /// 書き出し画面と紙面のプレビュー用。サンプルデータをそのまま報告の形にしたもの。
+    @MainActor
+    static var previewReport: ObservationReport {
+        let context = previewContainer.mainContext
+        let plan = previewPlan
+        return ObservationReport.make(
+            plan: plan,
+            movements: (try? context.fetch(FetchDescriptor<BowelMovement>())) ?? [],
+            dailyRecords: (try? context.fetch(FetchDescriptor<DailyRecord>())) ?? [],
+            targetRecords: (try? context.fetch(FetchDescriptor<TargetRecord>())) ?? [],
+            range: plan.observedRange() ?? Date.now...Date.now
+        )
+    }
+
     /// 記録が 1 件もない状態のプレビュー用コンテナ。
     @MainActor
     static let emptyPreviewContainer: ModelContainer = {

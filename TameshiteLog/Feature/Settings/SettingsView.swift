@@ -21,6 +21,9 @@ struct SettingsView: View {
                     NavigationLink { NotificationSettingsView() } label: {
                         Label("通知", systemImage: "bell")
                     }
+                    NavigationLink { ExportView() } label: {
+                        Label("書き出し", systemImage: "square.and.arrow.up")
+                    }
                     NavigationLink { DataManagementView() } label: {
                         Label("データ管理", systemImage: "externaldrive")
                     }

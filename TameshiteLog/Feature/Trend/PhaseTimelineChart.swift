@@ -15,6 +15,9 @@ struct PhaseTimelineChart: View {
     var summaries: [PhaseSummary]
     var metric: ObservationMetric
     var color: (PhaseSummary) -> Color
+    /// 書き出しのように「この期間だけ」を描きたいときの X 軸の範囲。nil ならデータに合わせる。
+    var dateDomain: ClosedRange<Date>?
+    var height: CGFloat = 240
 
     private var points: [DailyTally] {
         tallies.filter { metric.value(in: $0) != nil }
@@ -75,6 +78,7 @@ struct PhaseTimelineChart: View {
             }
         }
         .chartYScale(domain: yDomain)
+        .chartXScale(domain: xDomain)
         .chartXAxis {
             AxisMarks(values: .stride(by: .day, count: xStride)) { value in
                 AxisGridLine()
@@ -89,16 +93,32 @@ struct PhaseTimelineChart: View {
         }
         .chartXAxisLabel(alignment: .trailing) { Text("日付") }
         .chartYAxisLabel(alignment: .leading) { Text(metric.axisLabel) }
-        .frame(height: 240)
+        .frame(height: height)
     }
 
     // 帯とグラフの点を揃えるため、日の前後に半日ずつ広げて日付の中心に点が来るようにする。
     private func bandStart(_ summary: PhaseSummary) -> Date {
-        summary.startDate.addingTimeInterval(-43_200)
+        clamped(summary.startDate.addingTimeInterval(-43_200))
     }
 
     private func bandEnd(_ summary: PhaseSummary) -> Date {
-        summary.effectiveEndDate.addingTimeInterval(43_200)
+        clamped(summary.effectiveEndDate.addingTimeInterval(43_200))
+    }
+
+    /// フェーズが表示範囲からはみ出していても、帯が軸を押し広げないように切り詰める。
+    private func clamped(_ date: Date) -> Date {
+        guard let dateDomain else { return date }
+        return min(max(date, dateDomain.lowerBound), dateDomain.upperBound)
+    }
+
+    private var xDomain: ClosedRange<Date> {
+        if let dateDomain { return dateDomain }
+        let dates = tallies.map(\.date)
+        guard let first = dates.first, let last = dates.last, first <= last else {
+            let now = Date.now
+            return now.addingTimeInterval(-43_200)...now.addingTimeInterval(43_200)
+        }
+        return first.addingTimeInterval(-43_200)...last.addingTimeInterval(43_200)
     }
 
     private var yDomain: ClosedRange<Double> {
