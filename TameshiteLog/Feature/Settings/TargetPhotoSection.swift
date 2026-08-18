@@ -50,7 +50,9 @@ struct TargetPhotoSection: View {
                 // sheet と onChange は Section ではなく行の中身に付ける。
                 // Section に付けると届かず、写真を押しても何も開かない。
                 .sheet(item: $viewing) { photo in
-                    PhotoViewer(image: photo.image)
+                    PhotoViewer(image: photo.image) {
+                        photos.removeAll { $0.id == photo.id }
+                    }
                 }
             }
 
@@ -77,7 +79,7 @@ struct TargetPhotoSection: View {
         } header: {
             Text("写真")
         } footer: {
-            Text("処方箋や薬の説明書を控えておけます。書き出す記録には含まれないので、共有した相手には渡りません。写真を長押しすると削除できます。")
+            Text("処方箋や薬の説明書を控えておけます。書き出す記録には含まれないので、共有した相手には渡りません。削除は、写真を開くか長押しすると出てきます。")
         }
     }
 
@@ -168,6 +170,7 @@ struct TargetPhotoSection: View {
 /// 添付写真の拡大表示。処方箋は細かい字を読むためのものなので、拡大できないと控えの用を成さない。
 private struct PhotoViewer: View {
     let image: Data
+    var onDelete: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var zoom: CGFloat = 1
@@ -199,8 +202,18 @@ private struct PhotoViewer: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("閉じる") { dismiss() }
                 }
+                // 削除は下に置く。似た紙が並ぶので、開いて中身を確かめてから消せるほうが安全で、
+                // それでいて閉じるボタンと取り違えない距離がいる。
+                ToolbarItem(placement: .bottomBar) {
+                    Button("削除", systemImage: "trash", role: .destructive) {
+                        onDelete()
+                        dismiss()
+                    }
+                    .tint(.red)
+                }
             }
             .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(.visible, for: .bottomBar)
         }
     }
 
