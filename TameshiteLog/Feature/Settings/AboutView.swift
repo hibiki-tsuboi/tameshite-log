@@ -36,6 +36,8 @@ struct AboutView: View {
                 Text("プライバシー")
             }
         }
+        .scrollContentBackground(.hidden)
+        .appBackground()
         .navigationTitle("アプリについて")
         .navigationBarTitleDisplayMode(.inline)
     }

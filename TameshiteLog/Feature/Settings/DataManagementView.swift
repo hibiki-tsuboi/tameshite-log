@@ -54,6 +54,8 @@ struct DataManagementView: View {
             }
             #endif
         }
+        .scrollContentBackground(.hidden)
+        .appBackground()
         .navigationTitle("データ管理")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("記録をすべて削除しますか？", isPresented: $isConfirmingRecordDeletion, titleVisibility: .visible) {

@@ -32,6 +32,8 @@ struct SettingsView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .appBackground()
             .navigationTitle("設定")
         }
     }

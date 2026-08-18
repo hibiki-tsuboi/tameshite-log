@@ -43,6 +43,8 @@ struct TargetListView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .appBackground()
         .navigationTitle("観察対象")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

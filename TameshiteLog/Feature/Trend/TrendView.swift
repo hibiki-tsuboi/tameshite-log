@@ -108,7 +108,7 @@ struct TrendView: View {
             .padding(.bottom, 24)
             .readableWidth()
         }
-        .background(Color(.systemGroupedBackground))
+        .appBackground()
     }
 
     private var disclaimer: some View {

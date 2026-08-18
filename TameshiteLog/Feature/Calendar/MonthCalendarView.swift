@@ -27,7 +27,7 @@ struct MonthCalendarView: View {
                 .padding(.bottom, 24)
                 .readableWidth()
             }
-            .background(Color(.systemGroupedBackground))
+            .appBackground()
             .navigationTitle("カレンダー")
             .navigationDestination(for: Date.self) { day in
                 DayDetailView(day: day)

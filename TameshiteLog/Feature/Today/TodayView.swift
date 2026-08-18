@@ -62,7 +62,7 @@ private struct TodayPlanView: View {
             .padding(.bottom, 8)
             .readableWidth()
         }
-        .background(Color(.systemGroupedBackground))
+        .appBackground()
         .navigationTitle("今日")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

@@ -31,7 +31,7 @@
 |---|---|---|---|
 | **A** | `OnboardingView` + `PlanSetupView` | 白に溶けかけたミント→スカイの縦グラデ。上が淡いミント、中央はほぼ白、下が淡いスカイ。すりガラス越しの朝の光 | **本命** |
 | **B** | `ContentUnavailableView` 4 箇所（今日 / 経過 / プラン / 対象） | A より一段だけ濃く、中心が明るい放射状。記録が貯まれば消える背景 | 任意 |
-| — | 今日・経過・カレンダー・設定 | **敷かない**。白カードと Swift Charts が乗るので可読性が落ちるだけ | 不要 |
+| — | 今日・経過・カレンダー・設定 | 当初は「敷かない」としていたが、実際に試すと白カードが浮いて見えて良かったため撤回した。7 節を参照 | — |
 
 light / dark がそれぞれ要る。
 
@@ -194,10 +194,31 @@ light は黒文字に対して約 17:1、dark は白文字に対して約 8:1。
 
 グレインは生成時点で乗っており、バンディングは出ていない。
 
-### 置き換えたもの
+### 適用範囲
 
-- `OnboardingView` — 背景指定なし（白）→ 背景画像
-- `PlanSetupView` — `Color(.systemGroupedBackground)` → 背景画像
-- 共通化は `Feature/Onboarding/OnboardingBackground.swift` の `View.onboardingBackground()`
+共通化は `Support/AppBackground.swift` の `View.appBackground()`。
 
-空状態用（B）は未着手。
+| 画面 | 元の背景 |
+|---|---|
+| `OnboardingView` | 指定なし（白） |
+| `PlanSetupView` | `Color(.systemGroupedBackground)` |
+| `TodayView` | `Color(.systemGroupedBackground)` |
+| `TrendView` | `Color(.systemGroupedBackground)` |
+| `MonthCalendarView` | `Color(.systemGroupedBackground)` |
+| `SettingsView` | `List` の既定 |
+| `PlanListView` / `TargetListView` / `RecordItemsView` / `NotificationSettingsView` / `DataManagementView` / `AboutView` | `List` / `Form` の既定 |
+
+`List` / `Form` の画面は `.scrollContentBackground(.hidden)` を併せて指定している。
+これがないと既定の背景が上に乗って画像が見えない。
+
+シート（`BowelMovementEditor`、`PhaseStartSheet`、`DayDetailView`、各エディタ）は
+従来のグレーのまま。iOS ではモーダルが別の面として立っているのが自然なため、
+あえて揃えていない。
+
+### 残っている課題
+
+- **`PhasePalette.accents` の先頭が `.teal`**（`Support/PhasePalette.swift`）。背景も teal
+  なので、最初の介入フェーズの色がカレンダーの塗りと経過グラフの帯で背景に埋もれる。
+  現状フェーズは baseline（グレー）だけなので実害は出ていない。
+- 経過タブのセグメンテッドピッカーの未選択トラックが、背景の上でやや濁る。
+- 空状態用（B）は未着手。

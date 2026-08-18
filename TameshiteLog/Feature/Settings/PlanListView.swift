@@ -53,6 +53,8 @@ struct PlanListView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .appBackground()
         .navigationTitle("観察プラン")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

@@ -43,6 +43,8 @@ struct RecordItemsView: View {
                 Text("項目は今のところ固定です。食事や睡眠など、自由に決められる項目は今後の追加を想定しています。")
             }
         }
+        .scrollContentBackground(.hidden)
+        .appBackground()
         .navigationTitle("記録項目")
         .navigationBarTitleDisplayMode(.inline)
     }

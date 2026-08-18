@@ -44,6 +44,8 @@ struct NotificationSettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .scrollContentBackground(.hidden)
+        .appBackground()
         .navigationTitle("通知")
         .navigationBarTitleDisplayMode(.inline)
         .task { status = await NotificationService.authorizationStatus() }
