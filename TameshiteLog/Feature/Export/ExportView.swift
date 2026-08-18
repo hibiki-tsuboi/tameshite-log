@@ -64,6 +64,8 @@ struct ExportView: View {
                 previewSection
             }
         }
+        .scrollContentBackground(.hidden)
+        .appBackground()
         .navigationTitle("書き出し")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {

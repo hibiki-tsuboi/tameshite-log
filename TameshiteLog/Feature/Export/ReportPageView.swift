@@ -34,7 +34,7 @@ enum ReportPage: Hashable {
 /// メモだけは長さが読めないため、見積もりを多めに取って詰め込みすぎないようにする。
 enum ReportPagination {
     static let phasesPerPage = 6
-    static let chartsPerPage = 2
+    static let chartsPerPage = 4
     static let daysPerPage = 42
 
     static func pages(for report: ObservationReport) -> [ReportPage] {
@@ -116,7 +116,7 @@ struct ReportPageView: View {
             }
 
         case let .charts(metrics):
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 10) {
                 sectionTitle("推移")
                 ForEach(metrics) { metric in chartBlock(metric) }
             }
@@ -239,11 +239,13 @@ struct ReportPageView: View {
                             cell(value(.urgency, in: summary), width: phaseWidths[6], alignment: .trailing, numeric: true)
                         }
 
-                        Text(summary.type.label + (summary.targetSummary == "観察対象なし" ? "" : " ・ " + summary.targetSummary))
-                            .font(ReportFont.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .padding(.leading, 11)
+                        if let detail = detail(for: summary) {
+                            Text(detail)
+                                .font(ReportFont.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .padding(.leading, 11)
+                        }
                     }
                     .padding(.vertical, 3)
                     Divider().opacity(0.4)
@@ -307,7 +309,7 @@ struct ReportPageView: View {
                 metric: metric,
                 color: { color(for: $0) },
                 dateDomain: chartDomain,
-                height: 210
+                height: 145
             )
             .font(ReportFont.caption)
         }
@@ -319,7 +321,7 @@ struct ReportPageView: View {
 
     // MARK: - 日別の記録
 
-    private let dayWidths: [CGFloat] = [62, 20, 78, 34, 42, 34, 34, 34, 34, 143]
+    private let dayWidths: [CGFloat] = [46, 20, 78, 34, 42, 34, 34, 34, 34, 159]
 
     private func dayTable(_ days: [ObservationReport.DayRow]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -331,7 +333,7 @@ struct ReportPageView: View {
 
             ForEach(Array(days.enumerated()), id: \.element.id) { index, day in
                 HStack(spacing: 0) {
-                    cell(Formatting.mediumDate(day.date), width: dayWidths[0], alignment: .leading)
+                    cell(Formatting.shortDate(day.date), width: dayWidths[0], alignment: .leading)
                     cell(weekday(day.date), width: dayWidths[1], alignment: .center)
                     cell(day.phaseName, width: dayWidths[2], alignment: .leading)
                     cell(day.hasRecord ? "\(day.tally.bowelCount)" : "—", width: dayWidths[3], alignment: .trailing, numeric: true)
@@ -401,6 +403,14 @@ struct ReportPageView: View {
     }
 
     // MARK: -
+
+    /// フェーズ名がそのまま種類名になっている場合は種類を省く。同じ言葉が二度並ぶだけなので。
+    private func detail(for summary: PhaseSummary) -> String? {
+        var parts: [String] = []
+        if summary.name != summary.type.label { parts.append(summary.type.label) }
+        if summary.targetSummary != "観察対象なし" { parts.append(summary.targetSummary) }
+        return parts.isEmpty ? nil : parts.joined(separator: " ・ ")
+    }
 
     private func value(_ metric: ObservationMetric, in summary: PhaseSummary) -> String {
         guard let value = metric.value(in: summary) else { return "—" }

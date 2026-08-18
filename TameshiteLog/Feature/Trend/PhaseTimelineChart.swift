@@ -84,7 +84,9 @@ struct PhaseTimelineChart: View {
                 AxisGridLine()
                 AxisTick()
                 if let date = value.as(Date.self) {
-                    AxisValueLabel { Text(Formatting.shortDate(date)) }
+                    AxisValueLabel(anchor: labelAnchor(for: date)) {
+                        Text(Formatting.shortDate(date))
+                    }
                 }
             }
         }
@@ -125,6 +127,14 @@ struct PhaseTimelineChart: View {
         if let fixed = metric.axisDomain { return fixed }
         let maximum = points.compactMap { metric.value(in: $0) }.max() ?? 0
         return 0...max(4, (maximum + 1).rounded(.up))
+    }
+
+    /// 右端の目盛りは、ラベルがプロット領域からはみ出して切り詰められる。
+    /// 端に近いものだけ内側に向けて書く。
+    private func labelAnchor(for date: Date) -> UnitPoint {
+        let span = xDomain.upperBound.timeIntervalSince(xDomain.lowerBound)
+        guard span > 0 else { return .top }
+        return xDomain.upperBound.timeIntervalSince(date) / span < 0.06 ? .topTrailing : .top
     }
 
     /// 目盛りが詰まりすぎないよう、期間の長さで間隔を決める。

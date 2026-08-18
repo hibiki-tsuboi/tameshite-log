@@ -124,8 +124,7 @@ extension ObservationReport {
             DayRow(
                 tally: tally,
                 phaseName: plan.phase(on: tally.date, calendar: calendar)?.name ?? "",
-                completedTargets: (completedByDay[tally.date] ?? [])
-                    .compactMap { $0.target?.name }
+                completedTargets: Set((completedByDay[tally.date] ?? []).compactMap { $0.target?.name })
                     .sorted(),
                 note: noteByDay[tally.date] ?? ""
             )

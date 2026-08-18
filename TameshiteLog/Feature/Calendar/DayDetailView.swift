@@ -44,7 +44,7 @@ struct DayDetailView: View {
             .padding(.bottom, 8)
             .readableWidth()
         }
-        .background(Color(.systemGroupedBackground))
+        .appBackground()
         .navigationTitle(Formatting.weekdayDate(day))
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
