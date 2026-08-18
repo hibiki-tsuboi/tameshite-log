@@ -19,14 +19,25 @@ struct PhaseEditorView: View {
 
     private var store: ObservationStore { ObservationStore(context: context) }
 
+    private var selectableTypes: [PhaseType] {
+        guard let plan = phase.plan else { return PhaseType.allCases }
+        return store.selectablePhaseTypes(in: plan, editing: phase)
+    }
+
     var body: some View {
         Form {
-            Section("フェーズ") {
+            Section {
                 TextField("フェーズ名", text: $phase.name)
                 Picker("種類", selection: $phase.type) {
-                    ForEach(PhaseType.allCases) { type in
+                    ForEach(selectableTypes) { type in
                         Text(type.label).tag(type)
                     }
+                }
+            } header: {
+                Text("フェーズ")
+            } footer: {
+                if !selectableTypes.contains(.baseline) {
+                    Text("「\(PhaseType.baseline.label)」は比較の基準なので、プランに 1 つだけです。")
                 }
             }
 

@@ -82,6 +82,40 @@ struct ObservationStore {
         nextPhase(of: phase) == nil
     }
 
+    /// 選べるフェーズの種類。「いつもの状態」はプランに 1 つだけにする。
+    ///
+    /// `ObservationPlan.baselinePhase` も `ObservationAnalyzer.comparisons(for:)` も
+    /// 最初のベースラインしか基準に採らないので、2 つ目を作ると比較される側に回る。
+    /// `PhasePalette` はベースラインを並び順に関係なくグレーで返すため、グラフでは
+    /// 1 つ目と見分けもつかない。選んだとおりに扱われないなら、選ばせない。
+    ///
+    /// 編集中のフェーズ自身が今ベースラインなら残す。選択中の値が候補から消えると
+    /// ピッカーが空欄になる。
+    func selectablePhaseTypes(in plan: ObservationPlan, editing phase: ObservationPhase? = nil) -> [PhaseType] {
+        let takenByOther = plan.phases.contains {
+            $0.type == .baseline && $0.persistentModelID != phase?.persistentModelID
+        }
+        return PhaseType.allCases.filter { $0 != .baseline || !takenByOther || phase?.type == .baseline }
+    }
+
+    /// プランの中で重複しないフェーズ名。すでにあれば連番を足す。
+    ///
+    /// お休み期間はベースラインと違って何度でも起きるので、種類の名前をそのまま入れると
+    /// 「お休み期間」が並ぶ。`MetricChange.sentence(referenceName:)` は名前を引用するため、
+    /// どちらの期間と比べた一文なのか読み取れなくなる。
+    func uniquePhaseName(_ base: String, in plan: ObservationPlan, excluding phase: ObservationPhase? = nil) -> String {
+        let taken = Set(
+            plan.phases
+                .filter { $0.persistentModelID != phase?.persistentModelID }
+                .map(\.name)
+        )
+        guard taken.contains(base) else { return base }
+
+        var index = 2
+        while taken.contains("\(base) \(index)") { index += 1 }
+        return "\(base) \(index)"
+    }
+
     /// 新しいフェーズの開始日として選べる範囲。
     ///
     /// 下限は既存フェーズの開始日のうち最も遅い日の翌日。継続中かどうかで分けないのは、

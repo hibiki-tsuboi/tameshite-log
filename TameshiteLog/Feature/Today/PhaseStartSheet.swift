@@ -10,6 +10,8 @@ struct PhaseStartSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""
+    /// 直近に自動で入れた名前。ユーザーが書き換えたかどうかの判定に使う。
+    @State private var autofilledName = ""
     @State private var type: PhaseType = .intervention
     @State private var startDate = Date.now
     @State private var selectedTargetIDs: Set<PersistentIdentifier> = []
@@ -30,6 +32,14 @@ struct PhaseStartSheet: View {
     /// 継続中でも、閉じたフェーズの内側から始めた場合でも同じ扱いになる。
     private var shortenedPhase: ObservationPhase? { plan.phase(on: startDate) }
 
+    private var selectableTypes: [PhaseType] { store.selectablePhaseTypes(in: plan) }
+
+    /// 種類の説明。「いつもの状態」が候補から消えているときは、消えている理由も書く。
+    private var typeFooter: String {
+        guard !selectableTypes.contains(.baseline) else { return type.detail }
+        return "\(type.detail)\n「\(PhaseType.baseline.label)」は比較の基準なので、プランに 1 つだけです。"
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -37,7 +47,7 @@ struct PhaseStartSheet: View {
                     TextField("フェーズ名", text: $name)
                         .textInputAutocapitalization(.never)
                     Picker("種類", selection: $type) {
-                        ForEach(PhaseType.allCases) { type in
+                        ForEach(selectableTypes) { type in
                             Text(type.label).tag(type)
                         }
                     }
@@ -45,7 +55,7 @@ struct PhaseStartSheet: View {
                 } header: {
                     Text("新しいフェーズ")
                 } footer: {
-                    Text(type.detail)
+                    Text(typeFooter)
                 }
 
                 Section {
@@ -104,9 +114,10 @@ struct PhaseStartSheet: View {
             }
             .onChange(of: type) { _, newValue in
                 // 種類を選んだだけで名前が埋まると、そのまま保存できて速い。
-                if name.isEmpty || PhaseType.allCases.map(\.label).contains(name) {
-                    name = newValue.label
-                }
+                // 入れ替えるのは、まだこちらが入れた文字列のままのときだけ。
+                guard name.isEmpty || name == autofilledName else { return }
+                autofilledName = store.uniquePhaseName(newValue.label, in: plan)
+                name = autofilledName
             }
         }
     }
