@@ -125,7 +125,7 @@ struct PlanSetupView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
-            Text("決まっていなければ、空のままでも進めます。")
+            Text("まだ決まっていなければ、戻って「いつもの状態を記録する」から始められます。")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -149,7 +149,7 @@ struct PlanSetupView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(step == .planName && trimmedPlanName.isEmpty)
+            .disabled(isNextDisabled)
         }
         .padding()
         .background(.bar)
@@ -159,6 +159,21 @@ struct PlanSetupView: View {
 
     private var trimmedPlanName: String {
         planName.trimmingCharacters(in: .whitespaces)
+    }
+
+    private var trimmedTrialName: String {
+        trialName.trimmingCharacters(in: .whitespaces)
+    }
+
+    /// 名前を聞いている画面では、名前が入るまで進めない。
+    /// 試すものが空のまま始めると、対象のないフェーズができて実施の記録も
+    /// 比較もできず、結局あとから登録し直すことになる。
+    private var isNextDisabled: Bool {
+        switch step {
+        case .planName: trimmedPlanName.isEmpty
+        case .baseline: false
+        case .trial: trimmedTrialName.isEmpty
+        }
     }
 
     private func next() {
@@ -185,12 +200,11 @@ struct PlanSetupView: View {
         if wantsBaseline {
             store.startPhase(name: "いつもの状態", type: .baseline, on: .now, in: plan)
         } else {
-            let trimmedTrial = trialName.trimmingCharacters(in: .whitespaces)
-            let target = trimmedTrial.isEmpty ? nil : store.createTarget(name: trimmedTrial, type: trialType)
+            let target = store.createTarget(name: trimmedTrialName, type: trialType)
             store.startPhase(
-                name: target?.name ?? "試している期間",
+                name: target.name,
                 type: .intervention,
-                targets: [target].compactMap { $0 },
+                targets: [target],
                 on: .now,
                 in: plan
             )
