@@ -1,5 +1,6 @@
 import PhotosUI
 import SwiftUI
+import VisionKit
 
 /// 保存前の写真 1 枚。
 ///
@@ -26,6 +27,13 @@ struct TargetPhotoSection: View {
 
     @State private var picked: [PhotosPickerItem] = []
     @State private var viewing: TargetPhotoDraft?
+    @State private var isScanning = false
+    @State private var isCapturing = false
+    @State private var isChoosing = false
+
+    /// 書類スキャナとカメラは端末になければ出さない。シミュレータはどちらも持たない。
+    private var canScan: Bool { VNDocumentCameraViewController.isSupported }
+    private var canCapture: Bool { UIImagePickerController.isSourceTypeAvailable(.camera) }
 
     var body: some View {
         Section {
@@ -46,19 +54,52 @@ struct TargetPhotoSection: View {
                 }
             }
 
-            // カメラは持たない。カメラアプリで撮ってから選ぶ流れで足りるうえ、
-            // アプリ内撮影は NSCameraUsageDescription が要る。
-            PhotosPicker(selection: $picked, matching: .images, photoLibrary: .shared()) {
-                Label("写真を追加", systemImage: "photo.badge.plus")
-            }
-            .onChange(of: picked) { _, items in
-                guard !items.isEmpty else { return }
-                Task { await load(items) }
-            }
+            addControl
+                .photosPicker(isPresented: $isChoosing, selection: $picked, matching: .images)
+                .fullScreenCover(isPresented: $isScanning) {
+                    DocumentScanner { pages in
+                        isScanning = false
+                        append(pages)
+                    }
+                    .ignoresSafeArea()
+                }
+                .fullScreenCover(isPresented: $isCapturing) {
+                    CameraPicker { image in
+                        isCapturing = false
+                        append([image].compactMap { $0 })
+                    }
+                    .ignoresSafeArea()
+                }
+                .onChange(of: picked) { _, items in
+                    guard !items.isEmpty else { return }
+                    Task { await load(items) }
+                }
         } header: {
             Text("写真")
         } footer: {
             Text("処方箋や薬の説明書を控えておけます。書き出す記録には含まれないので、共有した相手には渡りません。写真を長押しすると削除できます。")
+        }
+    }
+
+    /// 撮る手立てがない端末でメニューを出すと、選択肢が 1 つだけの札になる。
+    /// そのときはライブラリを開くだけのボタンにする。
+    @ViewBuilder
+    private var addControl: some View {
+        if canScan || canCapture {
+            Menu {
+                if canScan {
+                    Button("書類をスキャン", systemImage: "doc.viewfinder") { isScanning = true }
+                }
+                if canCapture {
+                    Button("写真を撮る", systemImage: "camera") { isCapturing = true }
+                }
+                Button("ライブラリから選ぶ", systemImage: "photo.on.rectangle") { isChoosing = true }
+            } label: {
+                Label("写真を追加", systemImage: "photo.badge.plus")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        } else {
+            Button("写真を追加", systemImage: "photo.badge.plus") { isChoosing = true }
         }
     }
 
@@ -102,12 +143,25 @@ struct TargetPhotoSection: View {
     private func load(_ items: [PhotosPickerItem]) async {
         for item in items {
             guard let raw = try? await item.loadTransferable(type: Data.self) else { continue }
-            guard let image = await Task.detached(priority: .userInitiated, operation: {
-                AttachmentImage.prepared(from: raw)
-            }).value else { continue }
-            photos.append(TargetPhotoDraft(image: image))
+            await add(raw)
         }
         picked = []
+    }
+
+    /// 撮った画像を並びの末尾に足す。スキャナは複数ページを一度に返す。
+    private func append(_ images: [UIImage]) {
+        guard !images.isEmpty else { return }
+        let encoded = images.compactMap { $0.jpegData(compressionQuality: 0.95) }
+        Task {
+            for raw in encoded { await add(raw) }
+        }
+    }
+
+    private func add(_ raw: Data) async {
+        guard let image = await Task.detached(priority: .userInitiated, operation: {
+            AttachmentImage.prepared(from: raw)
+        }).value else { return }
+        photos.append(TargetPhotoDraft(image: image))
     }
 }
 
