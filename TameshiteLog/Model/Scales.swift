@@ -90,10 +90,12 @@ enum ConditionLevel: Int, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
+    /// 「普通」だけは良し悪しを示す色を持たせず、文字色と同じ濃さで出す。
+    /// `.secondary` にすると未選択の文字色と同じになり、選んでも見た目が変わらない。
     var tint: Color {
         switch self {
         case .good: .green
-        case .fair: .secondary
+        case .fair: .primary
         case .poor: .indigo
         }
     }

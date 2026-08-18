@@ -30,6 +30,15 @@ struct ConditionSelector: View {
                             isSelected ? level.tint.opacity(0.18) : Color(.tertiarySystemFill),
                             in: .rect(cornerRadius: 12)
                         )
+                        .overlay {
+                            // 選んだ合図を塗りの色だけに持たせない。「普通」は良し悪しを
+                            // 表さない色なので塗りが未選択とほとんど同じ濃さになり、
+                            // 押しても変わっていないように見える。枠線ならどの段階でも同じ強さで出る。
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(level.tint, lineWidth: 2)
+                            }
+                        }
                         .foregroundStyle(isSelected ? level.tint : .secondary)
                     }
                     .buttonStyle(.plain)
