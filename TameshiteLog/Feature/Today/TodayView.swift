@@ -102,7 +102,7 @@ private struct TodayPlanView: View {
             }
             Button("キャンセル", role: .cancel) {}
         } message: {
-            Text("記録はそのまま残ります。あとから期間を変えることもできます。")
+            Text("記録はそのまま残ります。ただし明日からは、次のフェーズを始めるまで期間ごとの平均や比較に入りません。期間はあとから変えられます。")
         }
     }
 
@@ -136,8 +136,13 @@ private struct TodayPlanView: View {
                             .foregroundStyle(.secondary)
                     }
                 } else {
+                    // フェーズのない日でも記録は止めない。代わりに、このままだと
+                    // 集計に入らないことと、さかのぼれば拾えることを書いておく。
                     Text("今日を含むフェーズがありません")
                         .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text("記録はこのまま続けられますが、期間ごとの平均や比較には入りません。開始日をさかのぼってフェーズを始めれば、その期間の記録もまとめて入ります。")
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                     Button("フェーズを始める") { isStartingPhase = true }
                         .font(.subheadline)
