@@ -52,16 +52,80 @@ struct ObservationStore {
 
     // MARK: - フェーズ
 
-    /// 新しいフェーズを開始する。継続中のフェーズは前日で閉じ、継続中が 2 つ並ばないようにする。
+    // 同じプランの中では、1 日が属するフェーズは高々 1 つ。フェーズ同士は重ならない。
+    //
+    // 記録はフェーズに紐づかず日付から導出するので、重なったとたんに「この日はどちらの
+    // フェーズか」が決まらなくなる。`ObservationPlan.phase(on:)` は開始日が後のほうを返し、
+    // 一方で `ObservationAnalyzer` は同じ記録を両方のフェーズの平均に入れるため、
+    // 画面に出ているフェーズと数字の中身が食い違ったまま気づけない。
+    // 開始日と終了日を動かす操作はこの節をすべて通し、隣と重ならないところまで詰める。
+    //
+    // 隙間は許す。どのフェーズにも属さない日はあり得るし、あとから拾えるようにしてある。
+
+    /// 開始日の順に見たときの、`phase` のひとつ前。
+    func previousPhase(of phase: ObservationPhase) -> ObservationPhase? {
+        guard let index = orderedIndex(of: phase), index > 0 else { return nil }
+        return phase.plan?.orderedPhases[index - 1]
+    }
+
+    /// 開始日の順に見たときの、`phase` のひとつ後。
+    func nextPhase(of phase: ObservationPhase) -> ObservationPhase? {
+        guard let phases = phase.plan?.orderedPhases,
+              let index = orderedIndex(of: phase),
+              index + 1 < phases.count else { return nil }
+        return phases[index + 1]
+    }
+
+    /// 継続中に戻せるのは最後のフェーズだけ。
+    /// 終了日を外すと以降ずっと続くことになるので、後ろにフェーズがあると全部を飲み込む。
+    func canBeOngoing(_ phase: ObservationPhase) -> Bool {
+        nextPhase(of: phase) == nil
+    }
+
+    /// 新しいフェーズの開始日として選べる範囲。
     ///
-    /// 閉じる対象を「開始日が新しい開始日より前のもの」に絞ると、継続中フェーズの開始日と同じ日か
-    /// それより前の日で新しいフェーズを始めたときに閉じ漏れが出て、継続中が 2 つ残る。
-    /// `ObservationPlan.phase(on:)` は開始日が後のものを採るので、そうなると片方の期間が
-    /// 黙って隠れてしまう。開始日の前後によらず、継続中はすべて閉じる。
+    /// 下限は既存フェーズの開始日のうち最も遅い日の翌日。継続中かどうかで分けないのは、
+    /// 閉じたフェーズの内側から始めても期間が重なるため。こう決めておくと、新しい開始日の
+    /// 前日で既存のフェーズを閉じたときに 1 日も残らないフェーズができない。
+    /// フェーズがまだ 1 つもなければ下限なし。
     ///
-    /// 終了日は自分の開始日より前にはしない。1 日も存在しないフェーズを作らないためで、
-    /// この下限に当たるのは開始日が新しい開始日以降だった場合だけ。
-    /// その組み合わせは `PhaseStartSheet` が開始日の下限で防いでいる。
+    /// 上限は今日。未来から始まるフェーズはその日まで記録もできず、今日がどのフェーズにも
+    /// 属さない状態になるだけで、`effectiveEndDate(asOf:)` も今日で頭打ちになる。
+    func newPhaseStartRange(in plan: ObservationPlan, asOf today: Date = .now) -> ClosedRange<Date> {
+        let latest = plan.phases.map { calendar.startOfDay(for: $0.startDate) }.max()
+        let lower = latest.flatMap { calendar.date(byAdding: .day, value: 1, to: $0) } ?? .distantPast
+        return Self.range(from: lower, to: calendar.startOfDay(for: today))
+    }
+
+    /// 既存フェーズの開始日として選べる範囲。
+    ///
+    /// 下限は前のフェーズの「終了日」ではなく「開始日の翌日」。終了日で挟むと、隣り合った
+    /// フェーズの境目を前に動かしたいときに、先に前のフェーズを縮めて隙間を空けないと
+    /// 目的の日が選べない。開始日を基準にしておけば 1 回の操作で済み、はみ出したぶんは
+    /// `moveStart(of:to:)` が前のフェーズの終了日を詰めて追従させる。
+    func startDateRange(for phase: ObservationPhase, asOf today: Date = .now) -> ClosedRange<Date> {
+        let lower = previousPhase(of: phase)
+            .map { calendar.startOfDay(for: $0.startDate) }
+            .flatMap { calendar.date(byAdding: .day, value: 1, to: $0) } ?? .distantPast
+        let ownEnd = phase.endDate.map { calendar.startOfDay(for: $0) } ?? .distantFuture
+        return Self.range(from: lower, to: min(ownEnd, calendar.startOfDay(for: today)))
+    }
+
+    /// 既存フェーズの終了日として選べる範囲。
+    ///
+    /// 上限は次のフェーズの前日。境目は後ろのフェーズの開始日で動かす決まりなので、
+    /// 終了日を動かせるのは隙間を空ける方向（と、空いている隙間の中）だけ。
+    func endDateRange(for phase: ObservationPhase, asOf today: Date = .now) -> ClosedRange<Date> {
+        let upper = nextPhase(of: phase)
+            .map { calendar.startOfDay(for: $0.startDate) }
+            .flatMap { calendar.date(byAdding: .day, value: -1, to: $0) } ?? .distantFuture
+        return Self.range(
+            from: calendar.startOfDay(for: phase.startDate),
+            to: min(upper, calendar.startOfDay(for: today))
+        )
+    }
+
+    /// 新しいフェーズを開始する。開始日より前に始まっているフェーズは前日で閉じる。
     @discardableResult
     func startPhase(
         name: String,
@@ -73,11 +137,7 @@ struct ObservationStore {
         warmupDays: Int = 0
     ) -> ObservationPhase {
         let start = calendar.startOfDay(for: date)
-        let previousDay = calendar.date(byAdding: .day, value: -1, to: start) ?? start
-
-        for phase in plan.orderedPhases where phase.isOngoing {
-            phase.endDate = max(previousDay, calendar.startOfDay(for: phase.startDate))
-        }
+        closePhases(startingBefore: start, in: plan)
 
         let phase = ObservationPhase(
             name: name,
@@ -93,13 +153,74 @@ struct ObservationStore {
         return phase
     }
 
+    /// 開始日を動かす。前のフェーズが新しい開始日に食い込んでいたら、その前日まで詰める。
+    func moveStart(of phase: ObservationPhase, to date: Date) {
+        let start = calendar.startOfDay(for: date)
+        guard start != calendar.startOfDay(for: phase.startDate) else { return }
+
+        phase.startDate = start
+        // 開始日が自分の終了日を追い越さないようにする。ピッカーの上限が防いでいるので、
+        // ここに掛かるのは範囲を通らずに呼ばれたときだけ。
+        if let end = phase.endDate, calendar.startOfDay(for: end) < start {
+            phase.endDate = start
+        }
+        if let plan = phase.plan {
+            closePhases(startingBefore: start, in: plan, excluding: phase)
+        }
+    }
+
+    /// 終了日を決める。`nil` で継続中に戻す（最後のフェーズのときだけ）。
+    /// 次のフェーズに食い込む日を渡されても、その前日で止める。
+    func setEnd(of phase: ObservationPhase, to date: Date?) {
+        guard let date else {
+            if canBeOngoing(phase) { phase.endDate = nil }
+            return
+        }
+        let range = endDateRange(for: phase)
+        phase.endDate = min(max(calendar.startOfDay(for: date), range.lowerBound), range.upperBound)
+    }
+
     /// 継続中のフェーズを指定日で終える。
     func endPhase(_ phase: ObservationPhase, on date: Date = .now) {
-        phase.endDate = calendar.startOfDay(for: date)
+        setEnd(of: phase, to: date)
     }
 
     func delete(_ phase: ObservationPhase) {
         context.delete(phase)
+    }
+
+    /// `date` から始まるフェーズと重ならないよう、それより前に始まっているフェーズを前日で閉じる。
+    ///
+    /// 継続中かどうかは見ない。継続中だけを閉じると、閉じたフェーズの内側から新しいフェーズを
+    /// 始めたときに重なりが残る。逆に終了日が `date` より前で収まっているフェーズは触らない。
+    /// 隙間を勝手に埋めてしまわないため。
+    ///
+    /// 終了日は自分の開始日より前にはしない。1 日も存在しないフェーズを作らないためで、
+    /// この下限に当たるのは開始日が `date` 以降だった場合だけ。そのフェーズは詰めようがなく、
+    /// 呼び出し側が `newPhaseStartRange(in:)` や `startDateRange(for:)` の下限で防いでいる。
+    private func closePhases(
+        startingBefore date: Date,
+        in plan: ObservationPlan,
+        excluding excluded: ObservationPhase? = nil
+    ) {
+        let previousDay = calendar.date(byAdding: .day, value: -1, to: date) ?? date
+
+        for phase in plan.phases where phase.persistentModelID != excluded?.persistentModelID {
+            let start = calendar.startOfDay(for: phase.startDate)
+            guard start < date else { continue }
+            if let end = phase.endDate, calendar.startOfDay(for: end) < date { continue }
+            phase.endDate = max(previousDay, start)
+        }
+    }
+
+    private func orderedIndex(of phase: ObservationPhase) -> Int? {
+        phase.plan?.orderedPhases.firstIndex { $0.persistentModelID == phase.persistentModelID }
+    }
+
+    /// 下限が上限を上回らないようにした範囲。`ClosedRange` は逆転すると落ちるので、
+    /// ピッカーに渡す範囲は必ずここを通す。
+    private static func range(from lower: Date, to upper: Date) -> ClosedRange<Date> {
+        lower...max(lower, upper)
     }
 
     // MARK: - 観察対象

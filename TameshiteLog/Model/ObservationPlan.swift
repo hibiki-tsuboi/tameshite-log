@@ -26,6 +26,9 @@ final class ObservationPlan {
         phases.sorted { $0.startDate < $1.startDate }
     }
 
+    /// その日のフェーズ。フェーズ同士は重ならない（`ObservationStore` が保証する）ので、
+    /// 当てはまるのは高々 1 つ。`last` はその前提が崩れたときに、カレンダーの帯の色と
+    /// 同じフェーズを返すための保険。
     func phase(on date: Date, calendar: Calendar = .current) -> ObservationPhase? {
         orderedPhases.last { $0.contains(date, calendar: calendar) }
     }

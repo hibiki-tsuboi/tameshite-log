@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// 新しいフェーズを始めるシート。
-/// 開始と同時に継続中のフェーズを閉じるので、期間が重ならない。
+/// 開始日より前に始まっているフェーズは同時に閉じるので、期間が重ならない。
 struct PhaseStartSheet: View {
     let plan: ObservationPlan
 
@@ -18,22 +18,17 @@ struct PhaseStartSheet: View {
 
     @Query(sort: \ObservationTarget.createdAt) private var targets: [ObservationTarget]
 
-    private var ongoingPhase: ObservationPhase? {
-        plan.orderedPhases.last { $0.isOngoing }
-    }
+    private var store: ObservationStore { ObservationStore(context: context) }
 
-    /// 選べる開始日の下限。継続中のフェーズがあるときは、その翌日以降に限る。
-    ///
-    /// 同じ日や前の日を選べてしまうと、継続中のフェーズを「開始日の前日」で閉じられない。
-    /// 下のフッタで約束していることが守れなくなるので、選べないようにしておく。
-    ///
-    /// 継続中のフェーズがないときは下限を設けない。フェーズのない期間をあとから
-    /// さかのぼって拾う使い方（今日画面が案内している）を止めないため。
-    private var earliestStartDate: Date? {
-        guard let ongoingPhase else { return nil }
-        let start = Calendar.current.startOfDay(for: ongoingPhase.startDate)
-        return Calendar.current.date(byAdding: .day, value: 1, to: start)
-    }
+    /// 選べる開始日の範囲。下限と上限の理由は `ObservationStore.newPhaseStartRange(in:asOf:)` に書いてある。
+    private var startRange: ClosedRange<Date> { store.newPhaseStartRange(in: plan) }
+
+    /// 開始日の順で最後のフェーズ。下限を決めているのはこのフェーズの開始日。
+    private var latestPhase: ObservationPhase? { plan.orderedPhases.last }
+
+    /// この開始によって短くなるフェーズ。選んだ日を含んでいるフェーズが前日で閉じられる。
+    /// 継続中でも、閉じたフェーズの内側から始めた場合でも同じ扱いになる。
+    private var shortenedPhase: ObservationPhase? { plan.phase(on: startDate) }
 
     var body: some View {
         NavigationStack {
@@ -46,16 +41,7 @@ struct PhaseStartSheet: View {
                             Text(type.label).tag(type)
                         }
                     }
-                    if let earliestStartDate {
-                        DatePicker(
-                            "開始日",
-                            selection: $startDate,
-                            in: earliestStartDate...,
-                            displayedComponents: .date
-                        )
-                    } else {
-                        DatePicker("開始日", selection: $startDate, displayedComponents: .date)
-                    }
+                    DatePicker("開始日", selection: $startDate, in: startRange, displayedComponents: .date)
                 } header: {
                     Text("新しいフェーズ")
                 } footer: {
@@ -85,14 +71,18 @@ struct PhaseStartSheet: View {
                         .lineLimit(1...4)
                 }
 
-                if let ongoing = ongoingPhase {
+                if shortenedPhase != nil || latestPhase != nil {
                     Section {
-                        Text("「\(ongoing.name)」は開始日の前日で終了します。記録は残ります。")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        Text("開始日は「\(ongoing.name)」の開始日より後の日から選べます。期間が重ならないようにするためです。")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                        if let shortenedPhase {
+                            Text("「\(shortenedPhase.name)」は開始日の前日で終了します。記録は残ります。")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        if let latestPhase {
+                            Text("開始日は「\(latestPhase.name)」の開始日より後の日から選べます。フェーズ同士が重ならないようにするためです。")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -108,11 +98,9 @@ struct PhaseStartSheet: View {
                 }
             }
             .onAppear {
-                // 継続中のフェーズが今日始まっていると、既定の「今日」が下限を下回る。
+                // 最後のフェーズが今日始まっていると、既定の「今日」が下限を下回る。
                 // 範囲外の値を持ったままだとピッカーの表示と実際の値が食い違う。
-                if let earliestStartDate, startDate < earliestStartDate {
-                    startDate = earliestStartDate
-                }
+                startDate = min(max(startDate, startRange.lowerBound), startRange.upperBound)
             }
             .onChange(of: type) { _, newValue in
                 // 種類を選んだだけで名前が埋まると、そのまま保存できて速い。
@@ -124,7 +112,6 @@ struct PhaseStartSheet: View {
     }
 
     private func start() {
-        let store = ObservationStore(context: context)
         store.startPhase(
             name: name.trimmingCharacters(in: .whitespaces),
             type: type,

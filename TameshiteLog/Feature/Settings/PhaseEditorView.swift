@@ -2,6 +2,9 @@ import SwiftUI
 import SwiftData
 
 /// フェーズの編集。期間をあとから直せることが、経過観察では大事になる。
+///
+/// 期間の変更は `ObservationStore` を通す。フェーズ同士が重なると、その日の記録が
+/// どちらのフェーズのものか決まらなくなるため、隣と重ならない範囲でしか動かせない。
 struct PhaseEditorView: View {
     @Bindable var phase: ObservationPhase
 
@@ -10,8 +13,11 @@ struct PhaseEditorView: View {
 
     @Query(sort: \ObservationTarget.createdAt) private var targets: [ObservationTarget]
     @State private var selectedTargetIDs: Set<PersistentIdentifier> = []
+    @State private var startDate = Date.now
     @State private var hasEndDate = false
     @State private var endDate = Date.now
+
+    private var store: ObservationStore { ObservationStore(context: context) }
 
     var body: some View {
         Form {
@@ -25,15 +31,27 @@ struct PhaseEditorView: View {
             }
 
             Section {
-                DatePicker("開始日", selection: $phase.startDate, displayedComponents: .date)
-                Toggle("終了日を設定", isOn: $hasEndDate)
+                DatePicker(
+                    "開始日",
+                    selection: $startDate,
+                    in: store.startDateRange(for: phase),
+                    displayedComponents: .date
+                )
+                if store.canBeOngoing(phase) {
+                    Toggle("終了日を設定", isOn: $hasEndDate)
+                }
                 if hasEndDate {
-                    DatePicker("終了日", selection: $endDate, in: phase.startDate..., displayedComponents: .date)
+                    DatePicker(
+                        "終了日",
+                        selection: $endDate,
+                        in: store.endDateRange(for: phase),
+                        displayedComponents: .date
+                    )
                 }
             } header: {
                 Text("期間")
             } footer: {
-                Text(hasEndDate ? "" : "終了日なしは「継続中」として扱われます。")
+                Text(periodFooter)
             }
 
             Section {
@@ -70,18 +88,36 @@ struct PhaseEditorView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             selectedTargetIDs = Set(phase.targets.map(\.persistentModelID))
+            startDate = Calendar.current.startOfDay(for: phase.startDate)
             hasEndDate = phase.endDate != nil
-            endDate = phase.endDate ?? Date.now
+            endDate = phase.endDate ?? store.endDateRange(for: phase).upperBound
         }
         .onChange(of: selectedTargetIDs) { _, newValue in
             phase.targets = targets.matching(newValue)
         }
+        .onChange(of: startDate) { _, newValue in
+            store.moveStart(of: phase, to: newValue)
+        }
         .onChange(of: hasEndDate) { _, newValue in
-            phase.endDate = newValue ? Calendar.current.startOfDay(for: endDate) : nil
+            store.setEnd(of: phase, to: newValue ? endDate : nil)
         }
         .onChange(of: endDate) { _, newValue in
             guard hasEndDate else { return }
-            phase.endDate = Calendar.current.startOfDay(for: newValue)
+            store.setEnd(of: phase, to: newValue)
         }
+    }
+
+    /// 期間の但し書き。効いている制限と、その場で起きる連鎖をその都度書く。
+    private var periodFooter: String {
+        var lines: [String] = []
+        if let previous = store.previousPhase(of: phase) {
+            lines.append("開始日を前に動かすと、「\(previous.name)」はその前日で終了します。記録は残ります。")
+        }
+        if store.canBeOngoing(phase) {
+            if !hasEndDate { lines.append("終了日なしは「継続中」として扱われます。") }
+        } else {
+            lines.append("次のフェーズがあるので、終了日は外せません。")
+        }
+        return lines.joined(separator: "\n")
     }
 }
