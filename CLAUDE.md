@@ -63,6 +63,12 @@ On first launch CoreData logs a wall of `Failed to stat path .../default.store` 
 
 **Exactly one plan has `isActive`.** `ObservationStore.activate(_:)` clears the others; every screen reads the active plan via `#Predicate { $0.isActive }`.
 
+**At most one phase is ongoing, per plan.** `ObservationStore.startPhase` closes *every* ongoing phase, not just the ones starting earlier — filtering on `phase.startDate < start` leaves two open phases whenever the new start lands on or before an ongoing phase's start, and `ObservationPlan.phase(on:)` then silently hides one of them. The end date is clamped with `max(previousDay, phase.startDate)` so a phase can never end before it begins. `PhaseStartSheet` additionally bounds the date picker to the day after the ongoing phase's start, which is what makes its 「開始日の前日で終了します」 promise keepable.
+
+**`TargetRecord.completedAt` belongs to the record's own day.** `toggleTarget` defaults to `.now`, so backfilling a past day from the calendar would otherwise stamp today's clock; the completion-time picker only edits hour and minute, so a wrong day can never be corrected from the UI. `completionTime(on:preferring:)` drops an off-day time to noon and `updateCompletionTime(_:to:)` re-anchors the picked hour/minute onto the record's day.
+
+**Days after today are not recordable.** The calendar wraps only past and present cells in a `NavigationLink`; future cells render dimmed and without `.isButton`. `DayDetailView` is the only way to reach a day's editors, so blocking navigation is what keeps records out of the future — the same reason `effectiveEndDate(asOf:)` and the phase bands stop at today.
+
 **Cross-model rules live in `ObservationStore`, not in views.** Starting a phase closes the previous one, daily summaries are created lazily and pruned when emptied, etc.
 
 ## Product constraints

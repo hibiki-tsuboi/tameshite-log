@@ -55,7 +55,7 @@ private struct TodayPlanView: View {
                     onSelect: { editingMovement = $0 },
                     onDelete: { ObservationStore(context: context).delete($0) }
                 )
-                TargetChecklistCard(day: day, targets: currentPhase?.targets ?? [])
+                TargetChecklistCard(title: "今日の観察対象", day: day, targets: currentPhase?.targets ?? [])
                 DailySummaryCard(day: day)
             }
             .padding(.horizontal)

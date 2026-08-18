@@ -52,7 +52,16 @@ struct ObservationStore {
 
     // MARK: - フェーズ
 
-    /// 新しいフェーズを開始する。継続中のフェーズがあれば前日で閉じ、期間が重ならないようにする。
+    /// 新しいフェーズを開始する。継続中のフェーズは前日で閉じ、継続中が 2 つ並ばないようにする。
+    ///
+    /// 閉じる対象を「開始日が新しい開始日より前のもの」に絞ると、継続中フェーズの開始日と同じ日か
+    /// それより前の日で新しいフェーズを始めたときに閉じ漏れが出て、継続中が 2 つ残る。
+    /// `ObservationPlan.phase(on:)` は開始日が後のものを採るので、そうなると片方の期間が
+    /// 黙って隠れてしまう。開始日の前後によらず、継続中はすべて閉じる。
+    ///
+    /// 終了日は自分の開始日より前にはしない。1 日も存在しないフェーズを作らないためで、
+    /// この下限に当たるのは開始日が新しい開始日以降だった場合だけ。
+    /// その組み合わせは `PhaseStartSheet` が開始日の下限で防いでいる。
     @discardableResult
     func startPhase(
         name: String,
@@ -64,9 +73,10 @@ struct ObservationStore {
         warmupDays: Int = 0
     ) -> ObservationPhase {
         let start = calendar.startOfDay(for: date)
+        let previousDay = calendar.date(byAdding: .day, value: -1, to: start) ?? start
 
-        for phase in plan.orderedPhases where phase.isOngoing && phase.startDate < start {
-            phase.endDate = calendar.date(byAdding: .day, value: -1, to: start)
+        for phase in plan.orderedPhases where phase.isOngoing {
+            phase.endDate = max(previousDay, calendar.startOfDay(for: phase.startDate))
         }
 
         let phase = ObservationPhase(
@@ -214,7 +224,7 @@ struct ObservationStore {
     func toggleTarget(_ target: ObservationTarget, on date: Date, at time: Date = .now) {
         guard let record = targetRecord(for: target, on: date) else {
             let record = TargetRecord(date: date, target: target, calendar: calendar)
-            record.markCompleted(at: time)
+            record.markCompleted(at: completionTime(on: date, preferring: time))
             context.insert(record)
             return
         }
@@ -226,6 +236,32 @@ struct ObservationStore {
         }
     }
 
+    /// 実施時刻を付け替える。時と分だけを受け取り、日付はその記録の日に合わせる。
+    ///
+    /// ピッカーは時と分しか編集しないので、保存済みの値の日付が別の日だと、
+    /// 何度編集してもその日から動かない。ここで日付ごと組み直して直す。
+    func updateCompletionTime(_ record: TargetRecord, to time: Date) {
+        let day = calendar.startOfDay(for: record.date)
+        let parts = calendar.dateComponents([.hour, .minute], from: time)
+        record.completedAt = calendar.date(
+            bySettingHour: parts.hour ?? 12,
+            minute: parts.minute ?? 0,
+            second: 0,
+            of: day
+        ) ?? day
+    }
+
+    /// 実施時刻をその日の中に収める。
+    ///
+    /// 既定は `.now` なので、カレンダーから過去の日を開いて実施済みにすると
+    /// 「今日の時刻」が入ってしまう。実施時刻のピッカーは時と分しか編集しないため、
+    /// 一度ずれた日付はあとから直せない。
+    /// 渡された時刻がその日のものでなければ、正午に置く（記録の後追い入力と同じ扱い）。
+    private func completionTime(on date: Date, preferring time: Date) -> Date {
+        let day = calendar.startOfDay(for: date)
+        guard !calendar.isDate(time, inSameDayAs: day) else { return time }
+        return calendar.date(bySettingHour: 12, minute: 0, second: 0, of: day) ?? day
+    }
 
     // MARK: - データ管理
 

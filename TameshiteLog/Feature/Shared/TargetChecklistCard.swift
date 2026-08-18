@@ -3,13 +3,15 @@ import SwiftData
 
 /// その日の観察対象と実施状況。薬なら服用の有無と服用時刻にあたる。
 struct TargetChecklistCard: View {
+    var title: String = "観察対象"
     let day: Date
     let targets: [ObservationTarget]
 
     @Environment(\.modelContext) private var context
     @Query private var records: [TargetRecord]
 
-    init(day: Date, targets: [ObservationTarget]) {
+    init(title: String = "観察対象", day: Date, targets: [ObservationTarget]) {
+        self.title = title
         self.day = day
         self.targets = targets
         let start = Calendar.current.startOfDay(for: day)
@@ -20,7 +22,7 @@ struct TargetChecklistCard: View {
     private var store: ObservationStore { ObservationStore(context: context) }
 
     var body: some View {
-        SectionCard(title: "今日の観察対象", systemImage: "checkmark.circle") {
+        SectionCard(title: title, systemImage: "checkmark.circle") {
             if targets.isEmpty {
                 Text("このフェーズに観察対象は登録されていません")
                     .font(.subheadline)
@@ -116,7 +118,7 @@ struct TargetChecklistCard: View {
                     "実施時刻",
                     selection: Binding(
                         get: { record.completedAt ?? day },
-                        set: { record.completedAt = $0 }
+                        set: { store.updateCompletionTime(record, to: $0) }
                     ),
                     displayedComponents: .hourAndMinute
                 )

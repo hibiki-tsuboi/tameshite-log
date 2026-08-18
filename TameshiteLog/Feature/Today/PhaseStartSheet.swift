@@ -22,6 +22,18 @@ struct PhaseStartSheet: View {
         plan.orderedPhases.last { $0.isOngoing }
     }
 
+    /// 選べる開始日の下限。継続中のフェーズがあるときは、その翌日以降に限る。
+    ///
+    /// 同じ日や前の日を選べてしまうと、継続中のフェーズを「開始日の前日」で閉じられない。
+    /// 下のフッタで約束していることが守れなくなるので、選べないようにしておく。
+    ///
+    /// 継続中のフェーズがないときは下限を設けない。フェーズのない期間をあとから
+    /// さかのぼって拾う使い方（今日画面が案内している）を止めないため。
+    private var earliestStartDate: Date? {
+        guard let ongoingPhase else { return nil }
+        let start = Calendar.current.startOfDay(for: ongoingPhase.startDate)
+        return Calendar.current.date(byAdding: .day, value: 1, to: start)
+    }
 
     var body: some View {
         NavigationStack {
@@ -34,7 +46,16 @@ struct PhaseStartSheet: View {
                             Text(type.label).tag(type)
                         }
                     }
-                    DatePicker("開始日", selection: $startDate, displayedComponents: .date)
+                    if let earliestStartDate {
+                        DatePicker(
+                            "開始日",
+                            selection: $startDate,
+                            in: earliestStartDate...,
+                            displayedComponents: .date
+                        )
+                    } else {
+                        DatePicker("開始日", selection: $startDate, displayedComponents: .date)
+                    }
                 } header: {
                     Text("新しいフェーズ")
                 } footer: {
@@ -69,6 +90,9 @@ struct PhaseStartSheet: View {
                         Text("「\(ongoing.name)」は開始日の前日で終了します。記録は残ります。")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+                        Text("開始日は「\(ongoing.name)」の開始日より後の日から選べます。期間が重ならないようにするためです。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -81,6 +105,13 @@ struct PhaseStartSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("開始") { start() }
                         .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .onAppear {
+                // 継続中のフェーズが今日始まっていると、既定の「今日」が下限を下回る。
+                // 範囲外の値を持ったままだとピッカーの表示と実際の値が食い違う。
+                if let earliestStartDate, startDate < earliestStartDate {
+                    startDate = earliestStartDate
                 }
             }
             .onChange(of: type) { _, newValue in

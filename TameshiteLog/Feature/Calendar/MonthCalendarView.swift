@@ -90,20 +90,29 @@ struct MonthCalendarView: View {
         let summaryDays = Set(dailyRecords.filter { !$0.isEmpty }.map { calendar.startOfDay(for: $0.date) })
         let noMovementDays = Set(dailyRecords.filter(\.hadNoBowelMovement).map { calendar.startOfDay(for: $0.date) })
 
+        let today = calendar.startOfDay(for: .now)
+
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
             ForEach(days, id: \.self) { day in
-                NavigationLink(value: day) {
-                    DayCell(
-                        day: day,
-                        isInDisplayedMonth: calendar.isDate(day, equalTo: month, toGranularity: .month),
-                        isToday: calendar.isDateInToday(day),
-                        bowelCount: countsByDay[day] ?? 0,
-                        hasSummary: summaryDays.contains(day),
-                        hadNoBowelMovement: noMovementDays.contains(day),
-                        phaseColor: phaseColor(on: day)
-                    )
+                let cell = DayCell(
+                    day: day,
+                    isInDisplayedMonth: calendar.isDate(day, equalTo: month, toGranularity: .month),
+                    isToday: calendar.isDateInToday(day),
+                    isFuture: day > today,
+                    bowelCount: countsByDay[day] ?? 0,
+                    hasSummary: summaryDays.contains(day),
+                    hadNoBowelMovement: noMovementDays.contains(day),
+                    phaseColor: phaseColor(on: day)
+                )
+
+                // まだ来ていない日は開かせない。開くと記録もまとめも書けてしまい、
+                // 起きていないことが記録として残る。フェーズの帯を今日で止めているのと同じ理由。
+                if day > today {
+                    cell
+                } else {
+                    NavigationLink(value: day) { cell }
+                        .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -153,6 +162,8 @@ private struct DayCell: View {
     var day: Date
     var isInDisplayedMonth: Bool
     var isToday: Bool
+    /// まだ来ていない日。開けないので、押せないことが分かるように薄く描く。
+    var isFuture: Bool
     var bowelCount: Int
     var hasSummary: Bool
     /// 「排便なし」と明示された日。0 と未記録を描き分けるために受け取る。
@@ -198,15 +209,19 @@ private struct DayCell: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 6)
         .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 10))
-        .opacity(isInDisplayedMonth ? 1 : 0.4)
+        .opacity(isInDisplayedMonth ? (isFuture ? 0.5 : 1) : 0.4)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(isFuture ? [] : .isButton)
     }
 
     private var accessibilityLabel: String {
         var parts = [Formatting.weekdayDate(day)]
         if isToday { parts.append("今日") }
+        if isFuture {
+            parts.append("これからの日")
+            return parts.joined(separator: "、")
+        }
         if bowelCount > 0 {
             parts.append("排便\(bowelCount)回")
         } else if hadNoBowelMovement {
