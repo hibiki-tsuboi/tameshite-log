@@ -18,12 +18,14 @@ xcodebuild -project TameshiteLog.xcodeproj -scheme TameshiteLog \
 # Run with 30 days of fake data (DEBUG only) — the fastest way to see every screen
 xcrun simctl boot "iPhone 17 Pro"
 xcrun simctl install "iPhone 17 Pro" \
-  "$(ls -d ~/Library/Developer/Xcode/DerivedData/TameshiteLog-*/Build/Products/Debug-iphonesimulator/TameshiteLog.app | head -1)"
+  "$(ls -dt ~/Library/Developer/Xcode/DerivedData/TameshiteLog-*/Build/Products/Debug-iphonesimulator/TameshiteLog.app | head -1)"
 xcrun simctl launch "iPhone 17 Pro" jp.hibiki.TameshiteLog -sampleData
 xcrun simctl io "iPhone 17 Pro" screenshot shot.png
 ```
 
 Deployment target is **iOS 26.0**. Always pass an explicit `OS=` in the destination: several installed runtimes (26.0–26.5) each expose a device named "iPhone 17 Pro", and an ambiguous destination silently resolves to whichever one xcodebuild picks.
+
+`ls -dt` in the install line is deliberate: Xcode and `xcodebuild` keep separate `TameshiteLog-<hash>` directories under DerivedData, so a plain `ls -d ... | head -1` sorts alphabetically and can hand you a build from hours ago. Sorting by modification time picks the one you just built. The symptom is a screenshot that stubbornly shows the code you already changed.
 
 Without `-sampleData` a fresh install opens onboarding. There is no test target, so `xcodebuild test` fails until one is added.
 
