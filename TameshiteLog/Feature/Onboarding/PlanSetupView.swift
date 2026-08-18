@@ -15,7 +15,7 @@ struct PlanSetupView: View {
         var question: String {
             switch self {
             case .planName: "何を観察しますか？"
-            case .baseline: "まず、いつもの状態を記録しますか？"
+            case .baseline: "試したいことは、もう始めていますか？"
             case .trial: "何を試しますか？"
             }
         }
@@ -96,13 +96,13 @@ struct PlanSetupView: View {
                 .foregroundStyle(.secondary)
 
             ChoiceRow(
-                title: "まず、いつもの状態を記録する",
-                subtitle: "数日ぶん記録してから、試すことを始めます",
+                title: "まだ始めていない",
+                subtitle: "いつもの状態から記録します。試すことは、始めるときに登録します",
                 isSelected: wantsBaseline
             ) { wantsBaseline = true }
 
             ChoiceRow(
-                title: "すぐに試したいことがある",
+                title: "もう始めている／今日から始める",
                 subtitle: "今日から試している期間として記録します",
                 isSelected: !wantsBaseline
             ) { wantsBaseline = false }
@@ -128,7 +128,7 @@ struct PlanSetupView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
-            Text("まだ決まっていなければ、戻って「いつもの状態を記録する」から始められます。")
+            Text("まだ決まっていなければ、戻って先にいつもの状態から記録を始められます。")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
