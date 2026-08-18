@@ -27,7 +27,7 @@ struct PlanSetupView: View {
     @State private var trialName = ""
     @State private var trialType: TargetType = .medication
 
-    private static let planSuggestions = ["下痢の経過観察", "お腹の調子", "睡眠の経過観察", "肌の調子"]
+    private static let planSuggestions = ["お腹の調子", "睡眠の経過観察", "肌の調子", "疲れやすさ"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -62,7 +62,7 @@ struct PlanSetupView: View {
 
     private var planNameStep: some View {
         VStack(alignment: .leading, spacing: 16) {
-            TextField("例：下痢の経過観察", text: $planName)
+            TextField("例：お腹の調子", text: $planName)
                 .textFieldStyle(.plain)
                 .font(.title3)
                 .padding()
@@ -98,7 +98,7 @@ struct PlanSetupView: View {
 
     private var trialStep: some View {
         VStack(alignment: .leading, spacing: 16) {
-            TextField("例：コレバイン", text: $trialName)
+            TextField("例：整腸剤", text: $trialName)
                 .textFieldStyle(.plain)
                 .font(.title3)
                 .padding()

@@ -44,7 +44,7 @@ final class ObservationTarget {
     var createdAt: Date = Date.distantPast
 
     /// 同じ対象を複数のフェーズで使い回せるよう多対多にしている。
-    /// （例：「コレバイン」を単独フェーズと併用フェーズの両方で観察する）
+    /// （例：同じ整腸剤を、単独で試すフェーズと別のものと併用するフェーズの両方で観察する）
     @Relationship(inverse: \ObservationPhase.targets)
     var phases: [ObservationPhase] = []
 
