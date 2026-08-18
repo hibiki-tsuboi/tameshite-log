@@ -11,6 +11,7 @@ struct TrendView: View {
 
     @Query(sort: \BowelMovement.date) private var movements: [BowelMovement]
     @Query(sort: \DailyRecord.date) private var dailyRecords: [DailyRecord]
+    @Query(sort: \TargetRecord.date) private var targetRecords: [TargetRecord]
 
     @State private var metric: ObservationMetric = .bowelCount
     @State private var isExporting = false
@@ -60,9 +61,19 @@ struct TrendView: View {
         let summaries = ObservationAnalyzer.summaries(
             for: plan,
             movements: movements,
-            dailyRecords: dailyRecords
+            dailyRecords: dailyRecords,
+            targetRecords: targetRecords
         )
         let comparisons = ObservationAnalyzer.comparisons(for: summaries)
+        let adherenceComparisons = Dictionary(
+            grouping: ObservationAnalyzer.adherenceComparisons(
+                for: plan,
+                movements: movements,
+                dailyRecords: dailyRecords,
+                targetRecords: targetRecords
+            ),
+            by: \.phaseID
+        )
         let colors = colorMap(for: plan, summaries: summaries)
 
         return ScrollView {
@@ -82,9 +93,10 @@ struct TrendView: View {
                             metric: metric,
                             color: { colors[$0.id] ?? .accentColor }
                         )
-                        Text("背景の色分けはフェーズ、破線はそのフェーズの平均です。記録のない日は点を打っていません。")
+                        Text(chartNote(summaries: summaries))
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     } else {
                         Text("この指標の記録がまだありません。")
                             .font(.subheadline)
@@ -97,6 +109,7 @@ struct TrendView: View {
                     PhaseSummaryCard(
                         summary: summary,
                         comparison: comparisons.first { $0.subject.id == summary.id },
+                        adherenceComparisons: adherenceComparisons[summary.id] ?? [],
                         metric: metric,
                         color: colors[summary.id] ?? .accentColor
                     )
@@ -109,6 +122,16 @@ struct TrendView: View {
             .readableWidth()
         }
         .appBackground()
+    }
+
+    /// 立ち上がりを外しているフェーズがあるときだけ、点と平均のずれについて足す。
+    /// 外した日も点は出ているので、平均の破線と合わないように見える。
+    private func chartNote(summaries: [PhaseSummary]) -> String {
+        var note = "背景の色分けはフェーズ、破線はそのフェーズの平均です。記録のない日は点を打っていません。"
+        if summaries.contains(where: { $0.warmupDays > 0 }) {
+            note += "集計から外した開始直後の日も、記録として点は表示しています。"
+        }
+        return note
     }
 
     private var disclaimer: some View {

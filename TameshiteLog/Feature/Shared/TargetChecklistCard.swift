@@ -32,6 +32,51 @@ struct TargetChecklistCard: View {
                         row(for: target)
                     }
                 }
+                Text("タップで「実施した」→「実施しなかった」→「未記録」と切り替わります。実施した日と実施しなかった日は、経過画面で見くらべられます。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// その日の記録の状態。「実施しなかった」と「まだ書いていない」を分けて持つ。
+    /// この 2 つを同じ見た目にすると、実施の有無で記録を見くらべられるのに気づけない。
+    private enum Mark {
+        case untracked
+        case completed
+        case skipped
+
+        var symbolName: String {
+            switch self {
+            case .untracked: "circle"
+            case .completed: "checkmark.circle.fill"
+            case .skipped: "xmark.circle.fill"
+            }
+        }
+
+        var tint: Color {
+            switch self {
+            case .untracked: .secondary
+            case .completed: .accentColor
+            case .skipped: .orange
+            }
+        }
+
+        var caption: String? {
+            switch self {
+            case .untracked: nil
+            case .completed: nil
+            case .skipped: "実施しなかった"
+            }
+        }
+
+        /// 次にタップしたらどうなるかを読み上げる。
+        var accessibilityAction: String {
+            switch self {
+            case .untracked: "実施した記録にする"
+            case .completed: "実施しなかった記録にする"
+            case .skipped: "未記録に戻す"
             }
         }
     }
@@ -39,29 +84,30 @@ struct TargetChecklistCard: View {
     @ViewBuilder
     private func row(for target: ObservationTarget) -> some View {
         let record = self.record(for: target)
-        let isCompleted = record?.isCompleted ?? false
+        let mark: Mark = record.map { $0.isCompleted ? .completed : .skipped } ?? .untracked
+        let isCompleted = mark == .completed
 
         HStack(spacing: 12) {
             Button {
                 store.toggleTarget(target, on: day)
             } label: {
                 HStack(spacing: 12) {
-                    Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: mark.symbolName)
                         .font(.title2)
-                        .foregroundStyle(isCompleted ? Color.accentColor : Color.secondary)
+                        .foregroundStyle(mark.tint)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(target.name)
                             .foregroundStyle(.primary)
-                        Text(target.type.label)
+                        Text(mark.caption ?? target.type.label)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(mark.caption == nil ? Color.secondary : mark.tint)
                     }
                     Spacer(minLength: 8)
                 }
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(target.name) を\(isCompleted ? "実施済みから未実施に戻す" : "実施済みにする")")
+            .accessibilityLabel("\(target.name) を\(mark.accessibilityAction)")
             .accessibilityAddTraits(isCompleted ? [.isSelected] : [])
 
             if isCompleted, let record {

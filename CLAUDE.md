@@ -15,7 +15,7 @@ Japanese-only UI, single app target, no dependencies, no test target, all data o
 xcodebuild -project TameshiteLog.xcodeproj -scheme TameshiteLog \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.0' build
 
-# Run with 30 days of fake data (DEBUG only) — the fastest way to see every screen
+# Run with ~6 weeks of fake data (DEBUG only) — the fastest way to see every screen
 xcrun simctl boot "iPhone 17 Pro"
 xcrun simctl install "iPhone 17 Pro" \
   "$(ls -dt ~/Library/Developer/Xcode/DerivedData/TameshiteLog-*/Build/Products/Debug-iphonesimulator/TameshiteLog.app | head -1)"
@@ -28,6 +28,10 @@ Deployment target is **iOS 26.0**. Always pass an explicit `OS=` in the destinat
 `ls -dt` in the install line is deliberate: Xcode and `xcodebuild` keep separate `TameshiteLog-<hash>` directories under DerivedData, so a plain `ls -d ... | head -1` sorts alphabetically and can hand you a build from hours ago. Sorting by modification time picks the one you just built. The symptom is a screenshot that stubbornly shows the code you already changed.
 
 Without `-sampleData` a fresh install opens onboarding. There is no test target, so `xcodebuild test` fails until one is added.
+
+`SampleData.specs` is sized so every branch of the analysis UI appears at once: one phase that clears `AnalysisBasis.minimumComparisonDays` and one that does not, one with `warmupDays`, one with alternating adherence (so both sides of the実施/未実施 comparison clear the minimum), and one that produces 0-movement days. Shortening a phase there can quietly remove a screen state from view.
+
+There is no way to script taps on the simulator here, so verifying a screen other than 今日 means temporarily pointing `MainTabView.selection` (or `TodayPlanView`'s `day`) at what you want to see, screenshotting, then reverting. For the PDF, set `isExporting = true`, launch, and pull the file out of `xcrun simctl get_app_container ... data` under `tmp/Export`.
 
 On first launch CoreData logs a wall of `Failed to stat path .../default.store` errors, then `Recovery attempt ... was successful!`. That is the store being created, not a bug.
 
@@ -43,7 +47,17 @@ On first launch CoreData logs a wall of `Failed to stat path .../default.store` 
 
 **Every record has two dates.** `date` is `startOfDay` (what predicates filter on) and `recordedAt` is the real timestamp. Setting one without the other desynchronizes the calendar from the charts; use `BowelMovement.updateRecordedAt(_:)`.
 
-**Averages divide by days that have a record, not by elapsed days.** A day with no entry means "did not log", not "zero". `DailyTally.hasRecord` defines the distinction, and `PhaseSummary` exposes both `elapsedDays` and `recordedDays` so the UI can show the basis. Bristol/pain/urgency averages are taken **per movement**, not as a mean of daily means, so busy days are not down-weighted.
+**Averages divide by days that have a record, not by elapsed days.** A day with no entry means "did not log", not "zero". `DailyTally.hasRecord` defines the distinction, and `PhaseSummary` exposes `elapsedDays`, `analyzedDays`, and `recordedDays` so the UI can show the basis. Bristol/pain/urgency averages are taken **per movement**, not as a mean of daily means, so busy days are not down-weighted.
+
+**A zero-movement day only counts when the user says so.** `DailyRecord.hadNoBowelMovement` is the difference between "there was none" and "not written yet"; it makes `isEmpty` false so the day flows through `hasSummary` into `hasRecord` and is averaged as 0. Anything that prunes empty summaries must keep that flag in `isEmpty`, or 0-count days silently vanish from the averages.
+
+**`warmupDays` narrows the aggregation window, not the phase.** `elapsedDays` still counts from the real start date; `ObservationPhase.analysisStartDate(calendar:)` moves only where averages and comparisons begin. Excluded days keep their records and are still plotted, so the chart shows points outside the average line by design — do not "fix" that by dropping them from `dailyTallies`.
+
+**Three states of a `TargetRecord`, not two.** No row = not logged; a row with `isCompleted == false` = explicitly did not do it. `ObservationAnalyzer` compares only explicitly-marked days, so collapsing these two into one boolean would silently turn "forgot to log" into "skipped it" — the same error as counting an unlogged day as 0. `ObservationStore.toggleTarget` cycles untracked → done → not-done → untracked (deleting the row) to keep the third state reachable and reversible.
+
+**Adherence is reported as counts, never as a rate.** `TargetAdherence` exposes `completedDays` / `skippedDays` / `untrackedDays` against `analyzedDays`. A percentage would have to guess what untracked days mean, which is the one thing the data cannot say.
+
+**Below `AnalysisBasis.minimumComparisonDays`, show the numbers but not the sentence.** `PhaseComparison.meetsMinimum` / `AdherenceComparison.meetsMinimum` gate `MetricChange.sentence(referenceName:)` only. The deltas stay visible — hiding data the user entered is worse — but a one-day difference must not be phrased as a finding.
 
 **`endDate == nil` means ongoing, not "ends today".** Use `effectiveEndDate(asOf:)` for anything that aggregates, and cap at today for anything that paints (an ongoing phase would otherwise colour the rest of the month in the calendar).
 
@@ -54,6 +68,8 @@ On first launch CoreData logs a wall of `Failed to stat path .../default.store` 
 ## Product constraints
 
 **No medical judgement, ever.** The app states measured differences and nothing more: 「記録上、平均排便回数が58%減少しています」 is fine; 「効いています」「続けてください」 is not. `MetricChange.sentence(referenceName:)` is the single place that phrases a change — keep new copy neutral there rather than composing verdicts in views.
+
+**Show the spread next to the average.** `PhaseSummary.spreads` carries min/max per metric so a reader can see whether a difference sits inside the day-to-day range. This is a measurement statement, not an interpretation, so it does not conflict with the rule above — and without it a small delta reads as more than it is.
 
 **Recording must stay a few seconds.** Open → pick a Bristol value → save. Time is prefilled; pain, urgency, and notes are optional. Do not add required fields to `BowelMovementEditor`.
 

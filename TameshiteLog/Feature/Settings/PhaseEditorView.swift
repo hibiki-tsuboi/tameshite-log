@@ -36,6 +36,22 @@ struct PhaseEditorView: View {
                 Text(hasEndDate ? "" : "終了日なしは「継続中」として扱われます。")
             }
 
+            Section {
+                Stepper(value: $phase.warmupDays, in: 0...14) {
+                    HStack {
+                        Text("集計から外す最初の日数")
+                        Spacer(minLength: 8)
+                        Text(phase.warmupDays == 0 ? "なし" : "\(phase.warmupDays)日")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                }
+            } header: {
+                Text("集計")
+            } footer: {
+                Text("始めてすぐは変化が出ないことがあります。外した日も記録は消えず、グラフにも点が出ます。平均と比較の集計からだけ外します。")
+            }
+
             TargetSelectionSection(selection: $selectedTargetIDs)
 
             Section("メモ") {

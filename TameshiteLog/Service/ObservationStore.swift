@@ -60,7 +60,8 @@ struct ObservationStore {
         targets: [ObservationTarget] = [],
         on date: Date = .now,
         in plan: ObservationPlan,
-        note: String = ""
+        note: String = "",
+        warmupDays: Int = 0
     ) -> ObservationPhase {
         let start = calendar.startOfDay(for: date)
 
@@ -68,7 +69,14 @@ struct ObservationStore {
             phase.endDate = calendar.date(byAdding: .day, value: -1, to: start)
         }
 
-        let phase = ObservationPhase(name: name, type: type, startDate: start, note: note, targets: targets)
+        let phase = ObservationPhase(
+            name: name,
+            type: type,
+            startDate: start,
+            note: note,
+            warmupDays: warmupDays,
+            targets: targets
+        )
         phase.plan = plan
         context.insert(phase)
         plan.phases.append(phase)
@@ -131,6 +139,12 @@ struct ObservationStore {
             calendar: calendar
         )
         context.insert(movement)
+        // 「排便なし」と記録した日に排便を足したら、その印は下ろす。
+        // 残しておくと同じ日について矛盾した記録が併存する。
+        if let record = dailyRecord(for: movement.date), record.hadNoBowelMovement {
+            record.hadNoBowelMovement = false
+            pruneIfEmpty(record)
+        }
         return movement
     }
 
@@ -152,6 +166,21 @@ struct ObservationStore {
         let record = DailyRecord(date: date, calendar: calendar)
         context.insert(record)
         return record
+    }
+
+    /// その日を「排便なし」として記録する／取り消す。
+    ///
+    /// 排便記録が 0 件でも「なかった」と「まだ書いていない」は別物なので、
+    /// 前者は明示的に残す。取り消して他に何も書かれていなければ行ごと片付ける。
+    func setNoBowelMovement(_ isNone: Bool, for date: Date) {
+        if isNone {
+            let record = ensureDailyRecord(for: date)
+            record.hadNoBowelMovement = true
+            record.updatedAt = .now
+        } else if let record = dailyRecord(for: date) {
+            record.hadNoBowelMovement = false
+            pruneIfEmpty(record)
+        }
     }
 
     /// 入力を全部消したまとめは残さない。カレンダーに空の記録印が出てしまうため。
@@ -177,20 +206,26 @@ struct ObservationStore {
         return targetRecords(on: date).first { $0.target?.persistentModelID == targetID }
     }
 
-    /// 実施済み／未実施を切り替える。実施にしたときは時刻も残す。
+    /// 未記録 → 実施した → 実施しなかった → 未記録 の順に切り替える。
+    ///
+    /// 「実施しなかった」を「未記録」と区別できないと、実施の有無で記録を見くらべられない。
+    /// 一方で押し間違いを未記録へ戻せないと、誤った「実施しなかった」が集計に残り続けるので、
+    /// 3 つ目で行を消して最初の状態に戻す。
     func toggleTarget(_ target: ObservationTarget, on date: Date, at time: Date = .now) {
-        if let record = targetRecord(for: target, on: date) {
-            if record.isCompleted {
-                record.markNotCompleted()
-            } else {
-                record.markCompleted(at: time)
-            }
-        } else {
+        guard let record = targetRecord(for: target, on: date) else {
             let record = TargetRecord(date: date, target: target, calendar: calendar)
             record.markCompleted(at: time)
             context.insert(record)
+            return
+        }
+
+        if record.isCompleted {
+            record.markNotCompleted()
+        } else {
+            context.delete(record)
         }
     }
+
 
     // MARK: - データ管理
 

@@ -95,6 +95,11 @@ struct DayDetailView: View {
                 }
             }
             .accessibilityElement(children: .combine)
+
+            if movements.isEmpty {
+                Divider()
+                NoBowelMovementRow(day: day)
+            }
         }
     }
 

@@ -57,6 +57,8 @@ struct ObservationReport: Sendable {
 
     var tallies: [DailyTally] { days.map(\.tally) }
     var elapsedDays: Int { days.count }
+    /// 立ち上がりを集計から外しているフェーズがあるか。紙面の但し書きを出し分けるために使う。
+    var hasWarmupExclusion: Bool { summaries.contains { $0.warmupDays > 0 } }
     var recordedDays: Int { days.filter(\.hasRecord).count }
     var totalBowelCount: Int { movements.count }
     var hasRecords: Bool { recordedDays > 0 }
@@ -88,6 +90,7 @@ extension ObservationReport {
             for: plan,
             movements: movements,
             dailyRecords: dailyRecords,
+            targetRecords: targetRecords,
             today: generatedAt,
             calendar: calendar
         )

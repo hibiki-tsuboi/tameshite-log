@@ -21,32 +21,49 @@ enum SampleData {
         var type: PhaseType
         var days: Int
         var targetNames: [String]
+        /// 集計から外す開始直後の日数。
+        var warmupDays: Int = 0
         var start: DayProfile
         /// 日数の経過とともに変化する場合の終了時プロファイル。nil なら変化しない。
         var end: DayProfile?
+        /// 何日おきに「実施しなかった」日を作るか。nil なら毎日実施した記録にする。
+        var skipEvery: Int?
+        /// 実施しなかった日のプロファイル。nil なら実施した日と同じ。
+        var skippedProfile: DayProfile?
     }
 
+    /// 日数は画面の確認に必要な分だけ持たせている。
+    /// 差を文章にするには両側に `AnalysisBasis.minimumComparisonDays` 日ぶん要るので、
+    /// それを満たすフェーズと満たさないフェーズの両方が出るようにしてある。
     private static let specs: [PhaseSpec] = [
         PhaseSpec(
-            name: "いつもの状態", type: .baseline, days: 6, targetNames: [],
+            name: "いつもの状態", type: .baseline, days: 8, targetNames: [],
             start: DayProfile(count: 4...6, bristol: 5...7, pain: 1...2, urgency: 1...2), end: nil
         ),
+        // 飲み忘れのあるフェーズ。実施した日と実施しなかった日の比較を確かめるために、
+        // 両側が最低日数を超えるように 1 日おきで作る。
         PhaseSpec(
-            name: "コレバイン単独", type: .intervention, days: 7, targetNames: ["コレバイン"],
-            start: DayProfile(count: 1...3, bristol: 3...5, pain: 0...1, urgency: 0...1), end: nil
+            name: "コレバイン単独", type: .intervention, days: 16, targetNames: ["コレバイン"],
+            start: DayProfile(count: 1...3, bristol: 3...5, pain: 0...1, urgency: 0...1), end: nil,
+            skipEvery: 2,
+            skippedProfile: DayProfile(count: 3...5, bristol: 5...6, pain: 1...2, urgency: 1...2)
         ),
+        // 記録が最低日数に届かないフェーズ。差の数値だけが出て一文が出ない側の確認用。
         PhaseSpec(
             name: "休薬", type: .washout, days: 4, targetNames: [],
             start: DayProfile(count: 4...5, bristol: 5...7, pain: 1...2, urgency: 1...2), end: nil
         ),
+        // 立ち上がりを外す設定の確認用。効き始めるまでの数日を集計から抜く。
         PhaseSpec(
-            name: "イリボー単独", type: .intervention, days: 8, targetNames: ["イリボー"],
+            name: "イリボー単独", type: .intervention, days: 10, targetNames: ["イリボー"],
+            warmupDays: 3,
             start: DayProfile(count: 4...4, bristol: 5...6, pain: 1...2, urgency: 1...2),
             end: DayProfile(count: 2...3, bristol: 4...5, pain: 0...1, urgency: 0...1)
         ),
+        // 排便が 0 件の日が出るフェーズ。「排便なし」の明示を確かめるために下限を 0 にしている。
         PhaseSpec(
             name: "イリボー + コレバイン", type: .intervention, days: 5, targetNames: ["イリボー", "コレバイン"],
-            start: DayProfile(count: 1...2, bristol: 3...4, pain: 0...1, urgency: 0...0), end: nil
+            start: DayProfile(count: 0...2, bristol: 3...4, pain: 0...1, urgency: 0...0), end: nil
         ),
     ]
 
@@ -78,6 +95,7 @@ enum SampleData {
                 type: spec.type,
                 startDate: start,
                 endDate: isLast ? nil : end,
+                warmupDays: spec.warmupDays,
                 targets: spec.targetNames.compactMap { targets[$0] }
             )
             phase.plan = plan
@@ -88,8 +106,21 @@ enum SampleData {
                 let day = calendar.date(byAdding: .day, value: dayIndex + offset, to: firstDay) ?? firstDay
                 guard day <= todayStart else { break }
                 let progress = spec.days > 1 ? Double(offset) / Double(spec.days - 1) : 0
-                let profile = interpolate(from: spec.start, to: spec.end, progress: progress)
-                generateDay(day, profile: profile, spec: spec, targets: targets, context: context, calendar: calendar)
+                // 実施しなかった日は別のプロファイルにする。実施の有無で差が出ていないと、
+                // 比較の画面ができているのか確かめられない。
+                let isSkipped = spec.skipEvery.map { offset % $0 == $0 - 1 } ?? false
+                let profile = isSkipped
+                    ? (spec.skippedProfile ?? spec.start)
+                    : interpolate(from: spec.start, to: spec.end, progress: progress)
+                generateDay(
+                    day,
+                    profile: profile,
+                    spec: spec,
+                    isSkipped: isSkipped,
+                    targets: targets,
+                    context: context,
+                    calendar: calendar
+                )
             }
             dayIndex += spec.days
         }
@@ -102,6 +133,7 @@ enum SampleData {
         _ day: Date,
         profile: DayProfile,
         spec: PhaseSpec,
+        isSkipped: Bool,
         targets: [String: ObservationTarget],
         context: ModelContext,
         calendar: Calendar
@@ -125,13 +157,16 @@ enum SampleData {
             context.insert(movement)
         }
 
-        // まとめは毎日は書かれない想定にして、実際の使われ方に近づける。
-        if Int.random(in: 0...3, using: &generator) > 0 {
+        // 排便が 1 件もない日は「排便なし」として残す。ここを立てないと未記録の日と区別できず、
+        // 0 回として集計に入らない。まとめ自体は毎日は書かれない想定にして実際の使われ方に近づける。
+        let hadNoBowelMovement = count == 0
+        if hadNoBowelMovement || Int.random(in: 0...3, using: &generator) > 0 {
             let condition: ConditionLevel = count >= 4 ? .poor : (count >= 3 ? .fair : .good)
             let record = DailyRecord(
                 date: day,
                 overallCondition: condition,
                 abdominalCondition: profile.pain.upperBound >= 2 ? .fair : .good,
+                hadNoBowelMovement: hadNoBowelMovement,
                 calendar: calendar
             )
             context.insert(record)
@@ -139,9 +174,14 @@ enum SampleData {
 
         for name in spec.targetNames {
             guard let target = targets[name] else { continue }
-            let hour = name == "イリボー" ? 8 : 20
             let record = TargetRecord(date: day, target: target, calendar: calendar)
-            record.markCompleted(at: calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day) ?? day)
+            if isSkipped {
+                // 行は残したまま未実施にする。行がないと「記録していない日」になってしまう。
+                record.markNotCompleted()
+            } else {
+                let hour = name == "イリボー" ? 8 : 20
+                record.markCompleted(at: calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day) ?? day)
+            }
             context.insert(record)
         }
     }

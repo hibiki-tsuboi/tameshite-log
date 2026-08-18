@@ -45,6 +45,13 @@ final class ObservationPhase {
     var endDate: Date?
     var note: String = ""
 
+    /// 集計から外す、フェーズ開始直後の日数。
+    ///
+    /// 薬もサプリも運動も初日から効くとは限らないので、立ち上がりの数日を平均に入れると
+    /// フェーズ全体が薄まる。外した日の記録は消さず、グラフにもそのまま点を打つ。
+    /// 平均と比較の分母からだけ抜く。
+    var warmupDays: Int = 0
+
     var plan: ObservationPlan?
     var targets: [ObservationTarget] = []
 
@@ -54,6 +61,7 @@ final class ObservationPhase {
         startDate: Date,
         endDate: Date? = nil,
         note: String = "",
+        warmupDays: Int = 0,
         targets: [ObservationTarget] = []
     ) {
         self.name = name
@@ -61,6 +69,7 @@ final class ObservationPhase {
         self.startDate = Calendar.current.startOfDay(for: startDate)
         self.endDate = endDate.map { Calendar.current.startOfDay(for: $0) }
         self.note = note
+        self.warmupDays = max(0, warmupDays)
         self.targets = targets
     }
 
@@ -71,6 +80,14 @@ final class ObservationPhase {
         guard day >= calendar.startOfDay(for: startDate) else { return false }
         guard let endDate else { return true }
         return day <= calendar.startOfDay(for: endDate)
+    }
+
+    /// 集計を始める日。`warmupDays` のぶん開始日から後ろにずらす。
+    /// 記録の絞り込みはここから `effectiveEndDate(asOf:)` までで行う。
+    func analysisStartDate(calendar: Calendar = .current) -> Date {
+        let start = calendar.startOfDay(for: startDate)
+        guard warmupDays > 0 else { return start }
+        return calendar.date(byAdding: .day, value: warmupDays, to: start) ?? start
     }
 
     /// 集計に使う終了日。継続中なら「今日」で打ち切る。

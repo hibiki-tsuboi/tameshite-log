@@ -175,10 +175,18 @@ struct ReportPageView: View {
     }
 
     private var basisNote: some View {
-        Text("平均の分母は記録がある日数です。記録のない日は「0 回」ではなく集計から外しています。フェーズ別の集計は、期間の一部だけを書き出した場合もフェーズ全体の記録から計算しています。")
+        Text(basisText)
             .font(ReportFont.caption)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var basisText: String {
+        var text = "平均の分母は記録がある日数です。記録のない日は「0 回」ではなく集計から外しています。「排便なし」と記録された日だけを 0 回として数えています。フェーズ別の集計は、期間の一部だけを書き出した場合もフェーズ全体の記録から計算しています。"
+        if report.hasWarmupExclusion {
+            text += "開始直後を集計から外す設定のフェーズでは、その日数ぶんを平均と比較から除いています。除いた日の記録は残っています。"
+        }
+        return text
     }
 
     private func sectionTitle(_ text: String) -> some View {
@@ -409,7 +417,21 @@ struct ReportPageView: View {
         var parts: [String] = []
         if summary.name != summary.type.label { parts.append(summary.type.label) }
         if summary.targetSummary != "観察対象なし" { parts.append(summary.targetSummary) }
+        if let adherence = adherenceText(for: summary) { parts.append(adherence) }
+        if summary.warmupDays > 0 { parts.append("最初の\(summary.warmupDays)日を除外") }
         return parts.isEmpty ? nil : parts.joined(separator: " ・ ")
+    }
+
+    /// 実施した日数を並べる。割合にはしない。チェックのない日は「実施していない」ではなく
+    /// 「記録していない」なので、率にすると実態から離れる。
+    private func adherenceText(for summary: PhaseSummary) -> String? {
+        guard !summary.adherence.isEmpty else { return nil }
+        if summary.adherence.count == 1, let item = summary.adherence.first {
+            return "実施 \(item.completedDays)/\(item.analyzedDays)日"
+        }
+        return summary.adherence
+            .map { "\($0.name) \($0.completedDays)/\($0.analyzedDays)日" }
+            .joined(separator: " ・ ")
     }
 
     private func value(_ metric: ObservationMetric, in summary: PhaseSummary) -> String {

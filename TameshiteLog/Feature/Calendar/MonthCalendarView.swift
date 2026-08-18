@@ -88,6 +88,7 @@ struct MonthCalendarView: View {
         let countsByDay = Dictionary(grouping: movements) { calendar.startOfDay(for: $0.date) }
             .mapValues(\.count)
         let summaryDays = Set(dailyRecords.filter { !$0.isEmpty }.map { calendar.startOfDay(for: $0.date) })
+        let noMovementDays = Set(dailyRecords.filter(\.hadNoBowelMovement).map { calendar.startOfDay(for: $0.date) })
 
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
             ForEach(days, id: \.self) { day in
@@ -98,6 +99,7 @@ struct MonthCalendarView: View {
                         isToday: calendar.isDateInToday(day),
                         bowelCount: countsByDay[day] ?? 0,
                         hasSummary: summaryDays.contains(day),
+                        hadNoBowelMovement: noMovementDays.contains(day),
                         phaseColor: phaseColor(on: day)
                     )
                 }
@@ -153,6 +155,8 @@ private struct DayCell: View {
     var isToday: Bool
     var bowelCount: Int
     var hasSummary: Bool
+    /// 「排便なし」と明示された日。0 と未記録を描き分けるために受け取る。
+    var hadNoBowelMovement: Bool
     var phaseColor: Color?
 
     private var dayNumber: String {
@@ -174,6 +178,11 @@ private struct DayCell: View {
                 Text("\(bowelCount)")
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
+            } else if hadNoBowelMovement {
+                // 未記録の空欄と区別できるよう、明示された 0 はそのまま数字で出す。
+                Text("0")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.tertiary)
             } else if hasSummary {
                 Circle()
                     .fill(Color.secondary.opacity(0.5))
@@ -198,7 +207,15 @@ private struct DayCell: View {
     private var accessibilityLabel: String {
         var parts = [Formatting.weekdayDate(day)]
         if isToday { parts.append("今日") }
-        parts.append(bowelCount > 0 ? "排便\(bowelCount)回" : (hasSummary ? "まとめあり" : "記録なし"))
+        if bowelCount > 0 {
+            parts.append("排便\(bowelCount)回")
+        } else if hadNoBowelMovement {
+            parts.append("排便なし")
+        } else if hasSummary {
+            parts.append("まとめあり")
+        } else {
+            parts.append("記録なし")
+        }
         return parts.joined(separator: "、")
     }
 }

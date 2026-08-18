@@ -165,7 +165,10 @@ private struct TodayPlanView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("今日の排便回数 \(movements.count)回")
 
-            if !movements.isEmpty {
+            if movements.isEmpty {
+                Divider()
+                NoBowelMovementRow(day: day)
+            } else {
                 Divider()
                 HStack(alignment: .top, spacing: 12) {
                     StatTile(title: "平均ブリストル", value: Formatting.decimal(average(\.bristolScale.rawValue)))

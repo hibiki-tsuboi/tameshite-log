@@ -14,12 +14,14 @@ struct PhaseStartSheet: View {
     @State private var startDate = Date.now
     @State private var selectedTargetIDs: Set<PersistentIdentifier> = []
     @State private var note = ""
+    @State private var warmupDays = 0
 
     @Query(sort: \ObservationTarget.createdAt) private var targets: [ObservationTarget]
 
     private var ongoingPhase: ObservationPhase? {
         plan.orderedPhases.last { $0.isOngoing }
     }
+
 
     var body: some View {
         NavigationStack {
@@ -37,6 +39,22 @@ struct PhaseStartSheet: View {
                     Text("新しいフェーズ")
                 } footer: {
                     Text(type.detail)
+                }
+
+                Section {
+                    Stepper(value: $warmupDays, in: 0...14) {
+                        HStack {
+                            Text("集計から外す最初の日数")
+                            Spacer(minLength: 8)
+                            Text(warmupDays == 0 ? "なし" : "\(warmupDays)日")
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                    }
+                } header: {
+                    Text("集計")
+                } footer: {
+                    Text("始めてすぐは変化が出ないことがあります。外した日も記録は消えず、グラフにも点が出ます。平均と比較の集計からだけ外します。")
                 }
 
                 TargetSelectionSection(selection: $selectedTargetIDs)
@@ -82,7 +100,8 @@ struct PhaseStartSheet: View {
             targets: targets.matching(selectedTargetIDs),
             on: startDate,
             in: plan,
-            note: note
+            note: note,
+            warmupDays: warmupDays
         )
         dismiss()
     }

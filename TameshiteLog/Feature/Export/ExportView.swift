@@ -259,6 +259,9 @@ struct ExportView: View {
         var movements: Int
         var dailyRecords: Int
         var targetRecords: Int
+        /// 実施済みの件数も見る。実施した／しなかったの切り替えは行数を変えないので、
+        /// 件数だけを見ていると集計が変わったのに書き出しが古いままになる。
+        var completedTargetRecords: Int
     }
 
     private var fileKey: FileKey {
@@ -270,7 +273,8 @@ struct ExportView: View {
             end: range?.upperBound,
             movements: movements.count,
             dailyRecords: dailyRecords.count,
-            targetRecords: targetRecords.count
+            targetRecords: targetRecords.count,
+            completedTargetRecords: targetRecords.count(where: \.isCompleted)
         )
     }
 
