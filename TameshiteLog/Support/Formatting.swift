@@ -38,6 +38,17 @@ enum Formatting {
         date.formatted(.dateTime.hour().minute().locale(locale))
     }
 
+    /// 「20:41」。その日の時刻でなければ「8/14 20:41」まで出す。
+    ///
+    /// 保存時刻のように、いつの操作なのかが読めないと意味が変わる場所で使う。
+    /// カレンダーから過去の日を開くと、その日と最後に書いた日は別になりうる。
+    static func timestamp(_ date: Date, on day: Date, calendar: Calendar = .current) -> String {
+        guard calendar.isDate(date, inSameDayAs: day) else {
+            return "\(shortDate(date)) \(time(date))"
+        }
+        return time(date)
+    }
+
     /// 「2026年8月18日」
     static func mediumDate(_ date: Date) -> String {
         date.formatted(.dateTime.year().month().day().locale(locale))
