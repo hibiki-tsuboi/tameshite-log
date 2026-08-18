@@ -96,6 +96,8 @@ struct TargetEditorView: View {
                 }
             }
         }
+        // 既定はスクロールで即閉じる。指の動きに追従させて、他の画面と揃える。
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle(target == nil ? "観察対象を追加" : "観察対象の編集")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

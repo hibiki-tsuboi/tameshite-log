@@ -98,6 +98,8 @@ struct BowelMovementEditor: View {
                     }
                 }
             }
+            // 既定はスクロールで即閉じる。指の動きに追従させて、他の画面と揃える。
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(isEditing ? "記録を編集" : "排便を記録")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

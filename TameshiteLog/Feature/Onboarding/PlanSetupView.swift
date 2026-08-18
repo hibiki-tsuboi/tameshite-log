@@ -58,7 +58,10 @@ struct PlanSetupView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
+                .dismissesKeyboardOnBackgroundTap()
             }
+            // 指で下ろしても閉じる。こちらが iOS の標準ジェスチャで、余白タップは補いになる。
+            .scrollDismissesKeyboard(.interactively)
 
             footer
         }

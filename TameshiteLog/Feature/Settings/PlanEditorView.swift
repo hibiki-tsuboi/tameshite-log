@@ -76,6 +76,8 @@ struct PlanEditorView: View {
                 }
             }
         }
+        // 既定はスクロールで即閉じる。指の動きに追従させて、他の画面と揃える。
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("プランの編集")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isAddingPhase) {
