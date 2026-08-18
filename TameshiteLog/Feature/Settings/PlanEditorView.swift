@@ -8,6 +8,15 @@ struct PlanEditorView: View {
     @Environment(\.modelContext) private var context
     @State private var isAddingPhase = false
 
+    private var store: ObservationStore { ObservationStore(context: context) }
+
+    /// 今日はフェーズを始められない理由。始められるなら `nil`。
+    /// 潰れた範囲のまま開始させない理由は `ObservationStore.canStartNewPhase(in:asOf:)` に書いてある。
+    private var startBlockedReason: String? {
+        guard !store.canStartNewPhase(in: plan), let latest = plan.orderedPhases.last else { return nil }
+        return "次のフェーズは「\(latest.name)」の開始日より後の日から始められます。"
+    }
+
     var body: some View {
         Form {
             Section("プラン") {
@@ -15,7 +24,7 @@ struct PlanEditorView: View {
                 DatePicker("開始日", selection: $plan.startDate, displayedComponents: .date)
                 if !plan.isActive {
                     Button("このプランを使う", systemImage: "checkmark.circle") {
-                        ObservationStore(context: context).activate(plan)
+                        store.activate(plan)
                     }
                 }
             }
@@ -48,7 +57,7 @@ struct PlanEditorView: View {
                     }
                     .swipeActions(edge: .trailing) {
                         Button("削除", systemImage: "trash", role: .destructive) {
-                            ObservationStore(context: context).delete(phase)
+                            store.delete(phase)
                         }
                     }
                 }
@@ -59,7 +68,12 @@ struct PlanEditorView: View {
             }
 
             Section {
-                Button("フェーズを追加", systemImage: "plus") { isAddingPhase = true }
+                Button("フェーズを始める", systemImage: "plus") { isAddingPhase = true }
+                    .disabled(startBlockedReason != nil)
+            } footer: {
+                if let startBlockedReason {
+                    Text(startBlockedReason)
+                }
             }
         }
         .navigationTitle("プランの編集")

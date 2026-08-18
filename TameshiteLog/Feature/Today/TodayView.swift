@@ -19,6 +19,11 @@ struct TodayView: View {
 }
 
 /// 有効なプランがある場合の中身。
+///
+/// フェーズを動かす操作はツールバーではなくヘッダーカードに置く。この画面は 1 日に何度も
+/// 開く記録画面で、主役は下の「排便を記録」。フェーズの開始や終了は数週間に一度の操作なので、
+/// 画面唯一のツールバー枠を占めるほどの頻度がない。カードに寄せると、今のフェーズという
+/// 状態表示と、それを変える操作が隣り合う。
 private struct TodayPlanView: View {
     let plan: ObservationPlan
     let day: Date
@@ -29,7 +34,6 @@ private struct TodayPlanView: View {
     @State private var isRecording = false
     @State private var editingMovement: BowelMovement?
     @State private var isStartingPhase = false
-    @State private var isConfirmingPhaseEnd = false
 
     init(plan: ObservationPlan, day: Date) {
         self.plan = plan
@@ -42,6 +46,8 @@ private struct TodayPlanView: View {
         )
     }
 
+    private var store: ObservationStore { ObservationStore(context: context) }
+
     private var currentPhase: ObservationPhase? { plan.phase(on: day) }
 
     var body: some View {
@@ -53,7 +59,7 @@ private struct TodayPlanView: View {
                     title: "今日の記録",
                     movements: movements,
                     onSelect: { editingMovement = $0 },
-                    onDelete: { ObservationStore(context: context).delete($0) }
+                    onDelete: { store.delete($0) }
                 )
                 TargetChecklistCard(title: "今日の観察対象", day: day, targets: currentPhase?.targets ?? [])
                 DailySummaryCard(day: day)
@@ -64,22 +70,6 @@ private struct TodayPlanView: View {
         }
         .appBackground()
         .navigationTitle("今日")
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Button("次のフェーズを始める", systemImage: "arrow.turn.down.right") {
-                        isStartingPhase = true
-                    }
-                    if let phase = currentPhase, phase.isOngoing {
-                        Button("このフェーズを今日で終える", systemImage: "stop.circle") {
-                            isConfirmingPhaseEnd = true
-                        }
-                    }
-                } label: {
-                    Label("フェーズ", systemImage: "ellipsis.circle")
-                }
-            }
-        }
         .safeAreaInset(edge: .bottom) { recordButton }
         .sheet(isPresented: $isRecording) {
             BowelMovementEditor(day: day)
@@ -90,35 +80,43 @@ private struct TodayPlanView: View {
         .sheet(isPresented: $isStartingPhase) {
             PhaseStartSheet(plan: plan)
         }
-        .confirmationDialog(
-            "このフェーズを今日で終えますか？",
-            isPresented: $isConfirmingPhaseEnd,
-            titleVisibility: .visible
-        ) {
-            Button("今日で終える") {
-                if let phase = currentPhase {
-                    ObservationStore(context: context).endPhase(phase, on: day)
-                }
-            }
-            Button("キャンセル", role: .cancel) {}
-        } message: {
-            Text("記録はそのまま残ります。ただし明日からは、次のフェーズを始めるまで期間ごとの平均や比較に入りません。期間はあとから変えられます。")
-        }
     }
 
     // MARK: - 各パーツ
 
     private var header: some View {
         SectionCard {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(Formatting.weekdayDate(day))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(Formatting.weekdayDate(day))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
 
-                Text(plan.name)
-                    .font(.headline)
+                    Text(plan.name)
+                        .font(.headline)
+                }
+                .accessibilityElement(children: .combine)
 
                 if let phase = currentPhase {
+                    phaseLink(phase)
+                } else {
+                    noPhaseNotice
+                }
+
+                Divider()
+                startPhaseButton
+            }
+        }
+    }
+
+    /// 今のフェーズ。表示そのものを編集への入口にして、状態と操作を離さない。
+    /// 期間を直すのも、このフェーズを終えるのも、この先の `PhaseEditorView` で行う。
+    private func phaseLink(_ phase: ObservationPhase) -> some View {
+        NavigationLink {
+            PhaseEditorView(phase: phase)
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(phase.name)
                             .font(.system(.title2, design: .rounded, weight: .bold))
@@ -135,21 +133,62 @@ private struct TodayPlanView: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
-                } else {
-                    // フェーズのない日でも記録は止めない。代わりに、このままだと
-                    // 集計に入らないことと、さかのぼれば拾えることを書いておく。
-                    Text("今日を含むフェーズがありません")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text("記録はこのまま続けられますが、期間ごとの平均や比較には入りません。開始日をさかのぼってフェーズを始めれば、その期間の記録もまとめて入ります。")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                    Button("フェーズを始める") { isStartingPhase = true }
-                        .font(.subheadline)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(systemName: "chevron.forward")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
+            .contentShape(.rect)
             .accessibilityElement(children: .combine)
+            .accessibilityHint("フェーズの期間や内容を編集します")
         }
+        .buttonStyle(.plain)
+    }
+
+    /// フェーズのない日でも記録は止めない。代わりに、このままだと集計に入らないことと、
+    /// さかのぼれば拾えることを書いておく。
+    private var noPhaseNotice: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("今日を含むフェーズがありません")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Text("記録はこのまま続けられますが、期間ごとの平均や比較には入りません。開始日をさかのぼってフェーズを始めれば、その期間の記録もまとめて入ります。")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// フェーズを始める入口。フェーズの有無で文言を変えない。
+    /// 始めた日より前に始まっているフェーズは `startPhase` が前日で閉じるので、
+    /// 「終えてから始める」と「そのまま次を始める」を選ばせる必要はない。
+    private var startPhaseButton: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button("フェーズを始める", systemImage: "plus") { isStartingPhase = true }
+                .font(.subheadline)
+                .disabled(startBlockedReason != nil)
+
+            if let startBlockedReason {
+                Text(startBlockedReason)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// 今日は始められない理由。始められるなら `nil`。
+    ///
+    /// 今日フェーズを始めたばかりだと `newPhaseStartRange(in:asOf:)` の下限が明日になり、
+    /// 選べる日が明日だけに潰れる。押せるままにすると未来から始まるフェーズができるので、
+    /// 押せなくしたうえで、いま何ができるのかを書く。
+    ///
+    /// 判定は `PhaseStartSheet` が範囲を作るときと同じ「今日」基準にする。表示中の日を
+    /// 基準にすると、押せるのにシート側では選べる日がない、という食い違いが出る。
+    private var startBlockedReason: String? {
+        guard !store.canStartNewPhase(in: plan), let latest = plan.orderedPhases.last else { return nil }
+        return "次のフェーズは「\(latest.name)」の開始日より後の日から始められます。"
     }
 
     private var countCard: some View {

@@ -125,7 +125,10 @@ struct PhaseEditorView: View {
             lines.append("開始日を前に動かすと、「\(previous.name)」はその前日で終了します。記録は残ります。")
         }
         if store.canBeOngoing(phase) {
-            if !hasEndDate { lines.append("終了日なしは「継続中」として扱われます。") }
+            if !hasEndDate {
+                lines.append("終了日なしは「継続中」として扱われます。")
+                lines.append("終了日を決めると、その日でこのフェーズは終わります。翌日からは次のフェーズを始めるまで、記録は残りますが期間ごとの平均や比較には入りません。")
+            }
         } else {
             lines.append("次のフェーズがあるので、終了日は外せません。")
         }

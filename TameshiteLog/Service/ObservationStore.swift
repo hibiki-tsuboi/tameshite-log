@@ -131,6 +131,16 @@ struct ObservationStore {
         return Self.range(from: lower, to: calendar.startOfDay(for: today))
     }
 
+    /// 新しいフェーズを今日から始められるか。
+    ///
+    /// `newPhaseStartRange(in:asOf:)` は下限が上限を上回ると `range(from:to:)` のクランプで
+    /// 「明日だけ」の範囲に潰れる。今日フェーズを始めた直後がそれで、そのまま開始すると
+    /// 上限は今日という決まりを破って未来から始まるフェーズができてしまう。入口を出す側は
+    /// ここを見て、始められないときは押させない。
+    func canStartNewPhase(in plan: ObservationPlan, asOf today: Date = .now) -> Bool {
+        newPhaseStartRange(in: plan, asOf: today).lowerBound <= calendar.startOfDay(for: today)
+    }
+
     /// 既存フェーズの開始日として選べる範囲。
     ///
     /// 下限は前のフェーズの「終了日」ではなく「開始日の翌日」。終了日で挟むと、隣り合った
