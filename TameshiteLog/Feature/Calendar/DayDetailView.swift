@@ -43,7 +43,10 @@ struct DayDetailView: View {
             .padding(.horizontal)
             .padding(.bottom, 8)
             .readableWidth()
+            .dismissesKeyboardOnBackgroundTap()
         }
+        // 指で下ろしても閉じる。こちらが iOS の標準ジェスチャで、余白タップは補いになる。
+        .scrollDismissesKeyboard(.interactively)
         .appBackground()
         .navigationTitle(Formatting.weekdayDate(day))
         .navigationBarTitleDisplayMode(.inline)
