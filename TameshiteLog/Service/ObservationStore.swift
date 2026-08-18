@@ -195,15 +195,34 @@ struct ObservationStore {
     // MARK: - データ管理
 
     func deleteAllRecords() {
-        try? context.delete(model: BowelMovement.self)
-        try? context.delete(model: DailyRecord.self)
-        try? context.delete(model: TargetRecord.self)
+        deleteAll(BowelMovement.self)
+        deleteAll(DailyRecord.self)
+        deleteAll(TargetRecord.self)
+        save()
     }
 
     func deleteEverything() {
         deleteAllRecords()
-        try? context.delete(model: ObservationPhase.self)
-        try? context.delete(model: ObservationPlan.self)
-        try? context.delete(model: ObservationTarget.self)
+        deleteAll(ObservationPhase.self)
+        deleteAll(ObservationPlan.self)
+        deleteAll(ObservationTarget.self)
+        save()
+    }
+
+    /// 1 件ずつ取り出して消す。
+    ///
+    /// `context.delete(model:)` の一括削除はリレーションの規則を通らず、
+    /// TargetRecord のように逆参照を持つモデルが消え残る。しかも `try?` で
+    /// 握りつぶすと、削除したつもりのデータが残ったままになる。
+    private func deleteAll<Model: PersistentModel>(_ type: Model.Type) {
+        let items = (try? context.fetch(FetchDescriptor<Model>())) ?? []
+        for item in items {
+            context.delete(item)
+        }
+    }
+
+    /// 削除は取り消せない操作なので、自動保存を待たずにここで確定させる。
+    private func save() {
+        try? context.save()
     }
 }
