@@ -62,6 +62,7 @@ private struct TodayPlanView: View {
         ScrollView {
             VStack(spacing: 16) {
                 header
+                TargetChecklistCard(title: "今日の観察対象", day: day, targets: currentPhase?.targets ?? [])
                 countCard
                 MovementListCard(
                     title: "今日の記録",
@@ -69,7 +70,6 @@ private struct TodayPlanView: View {
                     onSelect: { editingMovement = $0 },
                     onDelete: { store.delete($0) }
                 )
-                TargetChecklistCard(title: "今日の観察対象", day: day, targets: currentPhase?.targets ?? [])
                 DailySummaryCard(day: day)
             }
             .padding(.horizontal)

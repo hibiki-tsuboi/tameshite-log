@@ -65,10 +65,14 @@ struct TargetChecklistCard: View {
             }
         }
 
-        var caption: String? {
+        /// 行の 2 行目。丸の形だけでは、まだ手をつけていない日なのか記録した結果なのかを
+        /// 一目で読み取りにくい。ここまでは種類名（薬・サプリ…）を出していたが、
+        /// 名前を見れば分かるものより、その日どうなっているかを置くほうが要る。
+        /// 脚注のタップ順と同じ語を使って、次にどこへ切り替わるのかと対応させる。
+        var caption: String {
             switch self {
-            case .untracked: nil
-            case .completed: nil
+            case .untracked: "未記録"
+            case .completed: "実施した"
             // 「実施しなかった」とだけ書くと、これが比較の片側として数えられることが画面から読めない。
             // 押し間違いで × にした人がその場で気づけるよう、状態ではなく結果を書く。
             case .skipped: "実施しなかった日として比較に使います"
@@ -99,9 +103,9 @@ struct TargetChecklistCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(target.name)
                         .foregroundStyle(.primary)
-                    Text(mark.caption ?? target.type.label)
+                    Text(mark.caption)
                         .font(.caption)
-                        .foregroundStyle(mark.caption == nil ? Color.secondary : mark.tint)
+                        .foregroundStyle(mark.tint)
                 }
                 Spacer(minLength: 8)
             }
@@ -109,7 +113,7 @@ struct TargetChecklistCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(target.name) を\(mark.accessibilityAction)")
-        .accessibilityValue(mark.caption ?? "")
+        .accessibilityValue(mark.caption)
         .accessibilityAddTraits(mark == .completed ? [.isSelected] : [])
         .padding(.vertical, 8)
     }

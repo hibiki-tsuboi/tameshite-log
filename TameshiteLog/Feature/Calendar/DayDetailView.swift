@@ -32,12 +32,12 @@ struct DayDetailView: View {
         ScrollView {
             VStack(spacing: 16) {
                 header
+                TargetChecklistCard(day: day, targets: phase?.targets ?? [])
                 MovementListCard(
                     movements: movements,
                     onSelect: { editingMovement = $0 },
                     onDelete: { ObservationStore(context: context).delete($0) }
                 )
-                TargetChecklistCard(day: day, targets: phase?.targets ?? [])
                 DailySummaryCard(day: day)
             }
             .padding(.horizontal)
