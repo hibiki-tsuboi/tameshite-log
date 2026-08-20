@@ -101,7 +101,7 @@ enum ExportService {
             .joined(separator: "\r\n")
     }
 
-    private static func escape(_ field: String) -> String {
+    private nonisolated static func escape(_ field: String) -> String {
         let needsQuotes = field.contains { $0 == "," || $0 == "\"" || $0 == "\n" || $0 == "\r" }
         guard needsQuotes else { return field }
         return "\"" + field.replacingOccurrences(of: "\"", with: "\"\"") + "\""
