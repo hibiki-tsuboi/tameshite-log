@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// その日の観察対象と実施状況。薬なら服用の有無と服用時刻にあたる。
+/// その日の観察対象と実施状況。薬なら服用の有無にあたる。
 struct TargetChecklistCard: View {
     var title: String = "観察対象"
     let day: Date
@@ -87,57 +87,43 @@ struct TargetChecklistCard: View {
 
     @ViewBuilder
     private func row(for target: ObservationTarget) -> some View {
-        let record = self.record(for: target)
-        let mark: Mark = record.map { $0.isCompleted ? .completed : .skipped } ?? .untracked
-        let isCompleted = mark == .completed
+        let mark: Mark = record(for: target).map { $0.isCompleted ? .completed : .skipped } ?? .untracked
 
-        HStack(spacing: 12) {
-            Button {
-                store.toggleTarget(target, on: day)
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: mark.symbolName)
-                        .font(.title2)
-                        .foregroundStyle(mark.tint)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(target.name)
-                            .foregroundStyle(.primary)
-                        Text(mark.caption ?? target.type.label)
-                            .font(.caption)
-                            .foregroundStyle(mark.caption == nil ? Color.secondary : mark.tint)
-                    }
-                    Spacer(minLength: 8)
+        Button {
+            store.toggleTarget(target, on: day)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: mark.symbolName)
+                    .font(.title2)
+                    .foregroundStyle(mark.tint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(target.name)
+                        .foregroundStyle(.primary)
+                    Text(mark.caption ?? target.type.label)
+                        .font(.caption)
+                        .foregroundStyle(mark.caption == nil ? Color.secondary : mark.tint)
                 }
-                .contentShape(.rect)
+                Spacer(minLength: 8)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(target.name) を\(mark.accessibilityAction)")
-            .accessibilityValue(mark.caption ?? "")
-            .accessibilityAddTraits(isCompleted ? [.isSelected] : [])
-
-            if isCompleted, let record {
-                // 実施時刻はあとから直せるようにしておく。飲んだ時間を思い出して記録する場面が多いため。
-                DatePicker(
-                    "実施時刻",
-                    selection: Binding(
-                        get: { record.completedAt ?? day },
-                        set: { store.updateCompletionTime(record, to: $0) }
-                    ),
-                    displayedComponents: .hourAndMinute
-                )
-                .labelsHidden()
-                .datePickerStyle(.compact)
-            }
+            .contentShape(.rect)
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(target.name) を\(mark.accessibilityAction)")
+        .accessibilityValue(mark.caption ?? "")
+        .accessibilityAddTraits(mark == .completed ? [.isSelected] : [])
         .padding(.vertical, 8)
     }
 
     /// 「実施しなかった」が比較に使われることは、× の付いた行そのものが言う。
     /// まだ 1 つも付いていないあいだだけ、脚注でその比較があることを知らせる。
+    ///
+    /// 記録が日単位であることは常に書く。1 日に何回かあるものをどう付けるかは
+    /// ○ か × かを選ぶ前の疑問で、行の見た目からは読み取れない。
     private var footerText: String {
         let cycle = "タップで「実施した」→「実施しなかった」→「未記録」と切り替わります。"
-        guard !hasSkippedRow else { return cycle }
-        return cycle + "実施した日と実施しなかった日は、経過画面で見くらべられます。"
+        let unit = "1 日に何回かあるものは、全部できた日を「実施した」にします。"
+        guard !hasSkippedRow else { return cycle + unit }
+        return cycle + unit + "実施した日と実施しなかった日は、経過画面で見くらべられます。"
     }
 
     private var hasSkippedRow: Bool {

@@ -219,14 +219,8 @@ enum SampleData {
 
         for name in spec.targetNames {
             guard let target = targets[name] else { continue }
-            let record = TargetRecord(date: day, target: target, calendar: calendar)
-            if isSkipped {
-                // 行は残したまま未実施にする。行がないと「記録していない日」になってしまう。
-                record.markNotCompleted()
-            } else {
-                let hour = name == "イリボー" ? 8 : 20
-                record.markCompleted(at: calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day) ?? day)
-            }
+            // 未実施の日も行は残す。行がないと「記録していない日」になってしまう。
+            let record = TargetRecord(date: day, target: target, isCompleted: !isSkipped, calendar: calendar)
             context.insert(record)
         }
     }

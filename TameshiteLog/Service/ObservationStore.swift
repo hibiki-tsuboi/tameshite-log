@@ -398,46 +398,17 @@ struct ObservationStore {
     /// 「実施しなかった」を「未記録」と区別できないと、実施の有無で記録を見くらべられない。
     /// 一方で押し間違いを未記録へ戻せないと、誤った「実施しなかった」が集計に残り続けるので、
     /// 3 つ目で行を消して最初の状態に戻す。
-    func toggleTarget(_ target: ObservationTarget, on date: Date, at time: Date = .now) {
+    func toggleTarget(_ target: ObservationTarget, on date: Date) {
         guard let record = targetRecord(for: target, on: date) else {
-            let record = TargetRecord(date: date, target: target, calendar: calendar)
-            record.markCompleted(at: completionTime(on: date, preferring: time))
-            context.insert(record)
+            context.insert(TargetRecord(date: date, target: target, isCompleted: true, calendar: calendar))
             return
         }
 
         if record.isCompleted {
-            record.markNotCompleted()
+            record.isCompleted = false
         } else {
             context.delete(record)
         }
-    }
-
-    /// 実施時刻を付け替える。時と分だけを受け取り、日付はその記録の日に合わせる。
-    ///
-    /// ピッカーは時と分しか編集しないので、保存済みの値の日付が別の日だと、
-    /// 何度編集してもその日から動かない。ここで日付ごと組み直して直す。
-    func updateCompletionTime(_ record: TargetRecord, to time: Date) {
-        let day = calendar.startOfDay(for: record.date)
-        let parts = calendar.dateComponents([.hour, .minute], from: time)
-        record.completedAt = calendar.date(
-            bySettingHour: parts.hour ?? 12,
-            minute: parts.minute ?? 0,
-            second: 0,
-            of: day
-        ) ?? day
-    }
-
-    /// 実施時刻をその日の中に収める。
-    ///
-    /// 既定は `.now` なので、カレンダーから過去の日を開いて実施済みにすると
-    /// 「今日の時刻」が入ってしまう。実施時刻のピッカーは時と分しか編集しないため、
-    /// 一度ずれた日付はあとから直せない。
-    /// 渡された時刻がその日のものでなければ、正午に置く（記録の後追い入力と同じ扱い）。
-    private func completionTime(on date: Date, preferring time: Date) -> Date {
-        let day = calendar.startOfDay(for: date)
-        guard !calendar.isDate(time, inSameDayAs: day) else { return time }
-        return calendar.date(bySettingHour: 12, minute: 0, second: 0, of: day) ?? day
     }
 
     // MARK: - データ管理
