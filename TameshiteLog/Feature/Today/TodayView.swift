@@ -270,6 +270,7 @@ struct NoActivePlanView: View {
             Button("観察をはじめる") { isCreatingPlan = true }
                 .buttonStyle(.borderedProminent)
         }
+        .appBackground()
         .sheet(isPresented: $isCreatingPlan) {
             NavigationStack {
                 PlanSetupView { isCreatingPlan = false }

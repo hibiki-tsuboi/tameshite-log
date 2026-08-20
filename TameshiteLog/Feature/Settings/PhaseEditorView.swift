@@ -95,6 +95,8 @@ struct PhaseEditorView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .appBackground()
         // 既定はスクロールで即閉じる。指の動きに追従させて、他の画面と揃える。
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle("フェーズの編集")

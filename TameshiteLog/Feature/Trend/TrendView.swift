@@ -31,6 +31,7 @@ struct TrendView: View {
                     )
                 }
             }
+            .appBackground()
             .navigationTitle("経過")
             .toolbar {
                 if plan != nil {
@@ -121,7 +122,6 @@ struct TrendView: View {
             .padding(.bottom, 24)
             .readableWidth()
         }
-        .appBackground()
     }
 
     /// 立ち上がりを外しているフェーズがあるときだけ、点と平均のずれについて足す。
