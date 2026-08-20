@@ -11,7 +11,7 @@ struct AboutView: View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("ためしてログ")
+                    Text("ブリストルログ")
                         .font(.system(.title2, design: .rounded, weight: .bold))
                     Text("変えてみたことと、からだの変化を記録して、前後を見くらべるためのアプリです。")
                         .font(.subheadline)

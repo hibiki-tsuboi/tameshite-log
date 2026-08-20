@@ -10,8 +10,8 @@ enum ReportPDFRenderer {
         var mediaBox = CGRect(origin: .zero, size: ReportLayout.pageSize)
 
         let info: [CFString: Any] = [
-            kCGPDFContextTitle: "\(report.planName) ・ ためしてログの記録",
-            kCGPDFContextCreator: "ためしてログ",
+            kCGPDFContextTitle: "\(report.planName) ・ ブリストルログの記録",
+            kCGPDFContextCreator: "ブリストルログ",
         ]
 
         guard let consumer = CGDataConsumer(url: url as CFURL),

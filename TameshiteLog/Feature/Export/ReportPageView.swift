@@ -139,7 +139,7 @@ struct ReportPageView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("ためしてログ ・ 記録の書き出し")
+            Text("ブリストルログ ・ 記録の書き出し")
                 .font(ReportFont.caption)
                 .foregroundStyle(.secondary)
 
@@ -196,7 +196,7 @@ struct ReportPageView: View {
 
     private var footer: some View {
         HStack(alignment: .bottom) {
-            Text("ためしてログ ・ \(report.planName)")
+            Text("ブリストルログ ・ \(report.planName)")
             Spacer(minLength: 8)
             Text("\(pageNumber) / \(pageCount)")
         }

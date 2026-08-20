@@ -34,7 +34,7 @@ struct NotificationSettingsView: View {
                         }
                     }
                 } footer: {
-                    Text("iOS の「設定」＞「通知」から、ためしてログの通知を許可してください。")
+                    Text("iOS の「設定」＞「通知」から、ブリストルログの通知を許可してください。")
                 }
             }
 

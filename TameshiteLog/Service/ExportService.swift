@@ -87,9 +87,9 @@ enum ExportService {
         return url
     }
 
-    /// 「ためしてログ_下痢の経過観察_20260818.csv」のような名前を組み立てる。
+    /// 「ブリストルログ_下痢の経過観察_20260818.csv」のような名前を組み立てる。
     static func filename(planName: String, suffix: String, extension ext: String, date: Date = .now) -> String {
-        let parts = ["ためしてログ", sanitized(planName), suffix, stamp(date)].filter { !$0.isEmpty }
+        let parts = ["ブリストルログ", sanitized(planName), suffix, stamp(date)].filter { !$0.isEmpty }
         return parts.joined(separator: "_") + "." + ext
     }
 

@@ -27,7 +27,7 @@ enum NotificationService {
         guard await authorizationStatus() == .authorized else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "ためしてログ"
+        content.title = "ブリストルログ"
         content.body = "今日の記録を残しませんか？"
         content.sound = .default
 
