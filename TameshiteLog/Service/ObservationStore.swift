@@ -411,6 +411,205 @@ struct ObservationStore {
         }
     }
 
+    // MARK: - 引き継ぎ
+
+    /// 端末を移すための書き出し。写真も含めた全データを素の値に写す。
+    func makeTransferArchive(createdAt: Date = .now) -> TransferArchive {
+        var idByTarget: [PersistentIdentifier: UUID] = [:]
+        let targets = allTargets().map { target -> TransferArchive.Target in
+            let id = UUID()
+            idByTarget[target.persistentModelID] = id
+            return TransferArchive.Target(
+                id: id,
+                name: target.name,
+                type: target.type,
+                note: target.note,
+                createdAt: target.createdAt,
+                attachments: target.attachments
+                    .sorted { $0.createdAt < $1.createdAt }
+                    .map { .init(image: $0.image, createdAt: $0.createdAt) },
+                completions: target.records
+                    .sorted { $0.date < $1.date }
+                    .map { .init(date: $0.date, isCompleted: $0.isCompleted) }
+            )
+        }
+
+        let plans = allPlans()
+            .sorted { $0.createdAt < $1.createdAt }
+            .map { plan in
+                TransferArchive.Plan(
+                    name: plan.name,
+                    startDate: plan.startDate,
+                    endDate: plan.endDate,
+                    createdAt: plan.createdAt,
+                    isActive: plan.isActive,
+                    phases: plan.orderedPhases.map { phase in
+                        TransferArchive.Plan.Phase(
+                            name: phase.name,
+                            type: phase.type,
+                            startDate: phase.startDate,
+                            endDate: phase.endDate,
+                            note: phase.note,
+                            warmupDays: phase.warmupDays,
+                            targetIDs: phase.targets.compactMap { idByTarget[$0.persistentModelID] }
+                        )
+                    }
+                )
+            }
+
+        return TransferArchive(
+            appVersion: Self.appVersion,
+            createdAt: createdAt,
+            reminder: .current(),
+            targets: targets,
+            plans: plans,
+            summaries: all(DailyRecord.self, sortedBy: \.date).map {
+                TransferArchive.Summary(
+                    date: $0.date,
+                    overallCondition: $0.overallCondition,
+                    abdominalCondition: $0.abdominalCondition,
+                    note: $0.note,
+                    updatedAt: $0.updatedAt,
+                    hadNoBowelMovement: $0.hadNoBowelMovement
+                )
+            },
+            movements: all(BowelMovement.self, sortedBy: \.recordedAt).map {
+                TransferArchive.Movement(
+                    date: $0.date,
+                    recordedAt: $0.recordedAt,
+                    bristolScale: $0.bristolScale,
+                    abdominalPain: $0.abdominalPain,
+                    urgency: $0.urgency,
+                    note: $0.note
+                )
+            }
+        )
+    }
+
+    /// 引き継ぎファイルの中身で、いまのデータをまるごと置き換える。
+    ///
+    /// 混ぜない。記録はプランを参照せず日付だけを持つので、2 台ぶんを混ぜると
+    /// 「この日はどちらのプランの記録か」が決まらない。`DailyRecord` は同じ日に 1 件しか
+    /// 存在できず（`#Unique`）、`TargetRecord` の 3 状態はどちらかを優先した瞬間に
+    /// 「実施しなかった」が「未記録」へ化ける。どれも静かに壊れるので、置き換えだけにする。
+    ///
+    /// 日付はファイルの値をそのまま入れ直す。モデルの init は `startOfDay` を掛け直すため、
+    /// 書き出した端末と復元先のタイムゾーンが違うと 1 日ずれる。
+    /// 途中で保存しない。`deleteEverything()` は消した時点で確定させるので、そのあとの
+    /// 挿入で失敗すると「消えただけ」で終わる。削除と挿入をひとつの保存にまとめ、
+    /// 失敗したら `rollback()` で元の記録ごと戻す。
+    func restore(from archive: TransferArchive) throws {
+        deleteAllModels()
+
+        var targetByID: [UUID: ObservationTarget] = [:]
+        for item in archive.targets {
+            let target = ObservationTarget(name: item.name, type: item.type, note: item.note, createdAt: item.createdAt)
+            context.insert(target)
+            targetByID[item.id] = target
+
+            for photo in item.attachments {
+                context.insert(TargetAttachment(image: photo.image, createdAt: photo.createdAt, target: target))
+            }
+            for completion in item.completions {
+                let record = TargetRecord(
+                    date: completion.date,
+                    target: target,
+                    isCompleted: completion.isCompleted,
+                    calendar: calendar
+                )
+                record.date = completion.date
+                context.insert(record)
+            }
+        }
+
+        var restoredPlans: [(archived: TransferArchive.Plan, plan: ObservationPlan)] = []
+        for item in archive.plans {
+            let plan = ObservationPlan(
+                name: item.name,
+                startDate: item.startDate,
+                endDate: item.endDate,
+                createdAt: item.createdAt,
+                isActive: false
+            )
+            plan.startDate = item.startDate
+            context.insert(plan)
+            restoredPlans.append((item, plan))
+
+            for phaseItem in item.phases {
+                let phase = ObservationPhase(
+                    name: phaseItem.name,
+                    type: phaseItem.type,
+                    startDate: phaseItem.startDate,
+                    endDate: phaseItem.endDate,
+                    note: phaseItem.note,
+                    warmupDays: phaseItem.warmupDays,
+                    targets: phaseItem.targetIDs.compactMap { targetByID[$0] }
+                )
+                phase.startDate = phaseItem.startDate
+                phase.endDate = phaseItem.endDate
+                phase.plan = plan
+                context.insert(phase)
+                plan.phases.append(phase)
+            }
+        }
+
+        // 有効なプランはちょうど 1 つ。ファイル側が 0 個でも 2 個でもここで整える。
+        let active = restoredPlans.first { $0.archived.isActive } ?? restoredPlans.first
+        active?.plan.isActive = true
+
+        // 同じ日のまとめは 1 件しか持てない。壊れたファイルで保存ごと落ちないよう、
+        // 日ごとに最初の 1 件だけ入れる。
+        var insertedDays: Set<Date> = []
+        for item in archive.summaries {
+            guard insertedDays.insert(item.date).inserted else { continue }
+            let record = DailyRecord(
+                date: item.date,
+                overallCondition: item.overallCondition,
+                abdominalCondition: item.abdominalCondition,
+                note: item.note,
+                hadNoBowelMovement: item.hadNoBowelMovement,
+                calendar: calendar
+            )
+            record.date = item.date
+            record.updatedAt = item.updatedAt
+            context.insert(record)
+        }
+
+        for item in archive.movements {
+            let movement = BowelMovement(
+                recordedAt: item.recordedAt,
+                bristolScale: item.bristolScale,
+                abdominalPain: item.abdominalPain,
+                urgency: item.urgency,
+                note: item.note,
+                calendar: calendar
+            )
+            movement.date = item.date
+            context.insert(movement)
+        }
+
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            throw error
+        }
+        // 設定を書くのは、記録の保存が通ってから。
+        archive.reminder.apply()
+    }
+
+    private static var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+    }
+
+    private func all<Model: PersistentModel, Value: Comparable>(
+        _ type: Model.Type,
+        sortedBy keyPath: KeyPath<Model, Value> & Sendable
+    ) -> [Model] {
+        let items = (try? context.fetch(FetchDescriptor<Model>())) ?? []
+        return items.sorted { $0[keyPath: keyPath] < $1[keyPath: keyPath] }
+    }
+
     // MARK: - データ管理
 
     func deleteAllRecords() {
@@ -421,11 +620,19 @@ struct ObservationStore {
     }
 
     func deleteEverything() {
-        deleteAllRecords()
+        deleteAllModels()
+        save()
+    }
+
+    /// 全モデルを消す。保存はしない。
+    /// 復元は削除と挿入をひとつの保存にまとめたいので、確定させる側と分けてある。
+    private func deleteAllModels() {
+        deleteAll(BowelMovement.self)
+        deleteAll(DailyRecord.self)
+        deleteAll(TargetRecord.self)
         deleteAll(ObservationPhase.self)
         deleteAll(ObservationPlan.self)
         deleteAll(ObservationTarget.self)
-        save()
     }
 
     /// 1 件ずつ取り出して消す。

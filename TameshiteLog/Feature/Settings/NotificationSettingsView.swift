@@ -5,8 +5,8 @@ import UserNotifications
 /// 1 日 1 回の記録リマインダーの設定。
 struct NotificationSettingsView: View {
     @AppStorage(AppStorageKey.reminderEnabled) private var isEnabled = false
-    @AppStorage(AppStorageKey.reminderHour) private var hour = 21
-    @AppStorage(AppStorageKey.reminderMinute) private var minute = 0
+    @AppStorage(AppStorageKey.reminderHour) private var hour = AppStorageKey.defaultReminderHour
+    @AppStorage(AppStorageKey.reminderMinute) private var minute = AppStorageKey.defaultReminderMinute
 
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase

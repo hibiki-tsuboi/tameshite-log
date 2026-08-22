@@ -73,8 +73,11 @@ enum ExportService {
     // MARK: - ファイル
 
     /// 書き出し用の一時ディレクトリ。作り直すたびに空にして、古いファイルを残さない。
-    static func prepareDirectory() throws -> URL {
-        let directory = FileManager.default.temporaryDirectory.appending(path: "Export", directoryHint: .isDirectory)
+    ///
+    /// 名前を分けられるようにしてある。引き継ぎファイルを同じ場所に作ると、
+    /// 作り直しのたびに書き出した CSV と PDF まで消えてしまう。
+    static func prepareDirectory(named name: String = "Export") throws -> URL {
+        let directory = FileManager.default.temporaryDirectory.appending(path: name, directoryHint: .isDirectory)
         try? FileManager.default.removeItem(at: directory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory

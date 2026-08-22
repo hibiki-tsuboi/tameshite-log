@@ -25,8 +25,8 @@ struct MainTabView: View {
     @State private var selection: MainTab = .today
 
     @AppStorage(AppStorageKey.reminderEnabled) private var reminderEnabled = false
-    @AppStorage(AppStorageKey.reminderHour) private var reminderHour = 21
-    @AppStorage(AppStorageKey.reminderMinute) private var reminderMinute = 0
+    @AppStorage(AppStorageKey.reminderHour) private var reminderHour = AppStorageKey.defaultReminderHour
+    @AppStorage(AppStorageKey.reminderMinute) private var reminderMinute = AppStorageKey.defaultReminderMinute
 
     var body: some View {
         TabView(selection: $selection) {
