@@ -62,7 +62,7 @@ private struct TodayPlanView: View {
         ScrollView {
             VStack(spacing: 16) {
                 header
-                TargetChecklistCard(title: "今日の観察対象", day: day, targets: currentPhase?.targets ?? [])
+                TargetChecklistCard(title: "今日の観察対象", day: day, targets: currentPhase?.orderedTargets ?? [])
                 countCard
                 MovementListCard(
                     title: "今日の記録",

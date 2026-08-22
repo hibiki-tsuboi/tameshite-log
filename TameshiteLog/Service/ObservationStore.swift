@@ -451,7 +451,7 @@ struct ObservationStore {
                             endDate: phase.endDate,
                             note: phase.note,
                             warmupDays: phase.warmupDays,
-                            targetIDs: phase.targets.compactMap { idByTarget[$0.persistentModelID] }
+                            targetIDs: phase.orderedTargets.compactMap { idByTarget[$0.persistentModelID] }
                         )
                     }
                 )

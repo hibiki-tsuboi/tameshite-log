@@ -97,7 +97,21 @@ final class ObservationPhase {
         return min(calendar.startOfDay(for: endDate), max(cappedToday, calendar.startOfDay(for: startDate)))
     }
 
+    /// 観察対象を、並び順の決まった形で取り出す。
+    ///
+    /// `targets` は多対多で、SwiftData は並び順を保証しない。実際に起動ごとに入れ替わり、
+    /// チェックリストの行順・`targetSummary`・経過画面の実施記録の行順が揺れる。同じ日の
+    /// 同じ画面が開くたびに違う順で出ると、目で追っている側は探し直すことになる。
+    /// `ObservationPlan.orderedPhases` と同じように、読むときに並べ直す。
+    ///
+    /// 作成時刻が同じになったときは名前で決める。ここで決め切らないと、揺れる余地が残る。
+    var orderedTargets: [ObservationTarget] {
+        targets.sorted {
+            $0.createdAt == $1.createdAt ? $0.name < $1.name : $0.createdAt < $1.createdAt
+        }
+    }
+
     var targetSummary: String {
-        targets.isEmpty ? "観察対象なし" : targets.map(\.name).joined(separator: " + ")
+        targets.isEmpty ? "観察対象なし" : orderedTargets.map(\.name).joined(separator: " + ")
     }
 }

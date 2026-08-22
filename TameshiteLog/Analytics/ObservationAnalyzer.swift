@@ -200,7 +200,7 @@ enum ObservationAnalyzer {
             uniquingKeysWith: { first, _ in first }
         )
 
-        return phase.targets.compactMap { target in
+        return phase.orderedTargets.compactMap { target in
             let marked = markedDays(for: target, in: targetRecords, window: window, calendar: calendar)
 
             /// 片側ぶんの集計。分母は「その側の日のうち記録が付いた日数」。
@@ -309,7 +309,7 @@ enum ObservationAnalyzer {
         window: AnalysisWindow,
         calendar: Calendar
     ) -> [TargetAdherence] {
-        phase.targets.map { target in
+        phase.orderedTargets.map { target in
             let marked = markedDays(for: target, in: targetRecords, window: window, calendar: calendar)
             return TargetAdherence(
                 targetID: target.persistentModelID,

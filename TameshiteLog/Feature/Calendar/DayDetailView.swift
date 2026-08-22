@@ -32,7 +32,7 @@ struct DayDetailView: View {
         ScrollView {
             VStack(spacing: 16) {
                 header
-                TargetChecklistCard(day: day, targets: phase?.targets ?? [])
+                TargetChecklistCard(day: day, targets: phase?.orderedTargets ?? [])
                 MovementListCard(
                     movements: movements,
                     onSelect: { editingMovement = $0 },
