@@ -5,6 +5,7 @@ import SwiftData
 struct OnboardingView: View {
     @AppStorage(AppStorageKey.hasCompletedOnboarding) private var hasCompletedOnboarding = false
     @State private var isSettingUp = false
+    @State private var isChoosingTransferFile = false
 
     var body: some View {
         NavigationStack {
@@ -41,6 +42,16 @@ struct OnboardingView: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
 
+                    // 引き継ぎファイルを持って新しい端末を開いた人が、ここ以外で復元にたどり着けない。
+                    // タブは hasCompletedOnboarding が立ってからで、それにはプランを作るしかないので、
+                    // 案内がないと先に数日ぶん記録してしまう ── 復元は全置き換えなので、その数日は
+                    // あとから消える。順番を間違えると戻せないほうを、先に見せる。
+                    Button("引き継ぎファイルから復元") {
+                        isChoosingTransferFile = true
+                    }
+                    .font(.subheadline)
+                    .padding(.top, 4)
+
                     Text("記録は端末の中だけに保存されます。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -51,6 +62,10 @@ struct OnboardingView: View {
             .appBackground()
             .navigationDestination(isPresented: $isSettingUp) {
                 PlanSetupView { hasCompletedOnboarding = true }
+            }
+            // 復元できたら記録はもう入っている。プラン作成を通す必要はない。
+            .transferRestore(isPresented: $isChoosingTransferFile) {
+                hasCompletedOnboarding = true
             }
         }
     }
