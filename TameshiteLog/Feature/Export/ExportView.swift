@@ -39,6 +39,11 @@ struct ExportView: View {
     @State private var customEnd = Date.now
     @State private var files: ExportedFiles?
     @State private var failureMessage: String?
+    /// 組み立て済みのレポート。範囲か記録が動いたときだけ作り直す。
+    ///
+    /// computed プロパティにしていたときは、範囲・書き出し・プレビューの各節が
+    /// body の評価ごとにそれぞれ `ObservationReport.make` を回していた。
+    @State private var report: ObservationReport?
 
     private struct ExportedFiles {
         var pdf: URL
@@ -213,7 +218,7 @@ struct ExportView: View {
             ?? plans.first
     }
 
-    private var report: ObservationReport? {
+    private func makeReport() -> ObservationReport? {
         guard let plan = selectedPlan else { return nil }
         return ObservationReport.make(
             plan: plan,
@@ -281,6 +286,8 @@ struct ExportView: View {
     private func prepareFiles() async {
         files = nil
         failureMessage = nil
+        let report = makeReport()
+        self.report = report
         guard let report, report.hasRecords else { return }
 
         do {
@@ -290,7 +297,7 @@ struct ExportView: View {
             let pdf = directory.appending(
                 path: ExportService.filename(planName: report.planName, suffix: "", extension: "pdf", date: stamp)
             )
-            try ReportPDFRenderer.render(report, to: pdf)
+            try await ReportPDFRenderer.render(report, to: pdf)
 
             let daily = try ExportService.write(
                 ExportService.dailyCSV(for: report),

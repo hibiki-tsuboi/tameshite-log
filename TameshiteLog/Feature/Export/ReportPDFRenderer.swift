@@ -3,9 +3,14 @@ import SwiftUI
 /// 紙面ビューを 1 ページずつ PDF に描き込む。
 ///
 /// ページの中身は `ReportPagination` が決めているので、ここは描画と入れ物だけを担当する。
+///
+/// `ImageRenderer` は SwiftUI のビューを描くのでメインアクターから動かせない。
+/// 1 年ぶんの書き出しは日別だけで 10 ページを超えるため、全ページを一息に描くと
+/// その間ずっと画面が止まり、「準備しています…」がそう見えないまま固まる。
+/// ページの区切りでメインループへ返すために async にしてある。
 enum ReportPDFRenderer {
 
-    static func render(_ report: ObservationReport, to url: URL) throws {
+    static func render(_ report: ObservationReport, to url: URL) async throws {
         let pages = ReportPagination.pages(for: report)
         var mediaBox = CGRect(origin: .zero, size: ReportLayout.pageSize)
 
@@ -36,6 +41,9 @@ enum ReportPDFRenderer {
                 draw(context)
                 context.endPDFPage()
             }
+
+            // 1 ページ描くごとに手を離す。ページ単位より細かくは切れない。
+            await Task.yield()
         }
 
         context.closePDF()
