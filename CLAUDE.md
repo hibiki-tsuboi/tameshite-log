@@ -29,7 +29,7 @@ Deployment target is **iOS 26.0**. Always pass an explicit `OS=` in the destinat
 
 Without `-sampleData` a fresh install opens onboarding. There is no test target, so `xcodebuild test` fails until one is added.
 
-`SampleData.specs` is sized so every branch of the analysis UI appears at once: one phase that clears `AnalysisBasis.minimumComparisonDays` and one that does not, one with `warmupDays`, one with alternating adherence (so both sides of the実施/未実施 comparison clear the minimum), and one that produces 0-movement days. Shortening a phase there can quietly remove a screen state from view.
+`SampleData.specs` is sized so every branch of the analysis UI appears at once: one phase that clears `AnalysisBasis.minimumComparisonDays` and one that does not, one with `warmupDays`, one with alternating adherence (so both sides of the実施/未実施 comparison clear the minimum), and one that produces 0-movement days. Shortening a phase there can quietly remove a screen state from view. The target names in it are category words (整腸剤 / 下痢止め), not brands: the App Store screenshots are taken from this data, so a real product name there publishes 〈a named prescription drug〉 next to 〈the average fell by n%〉 as marketing material — a claim the app itself refuses to make. Keep new sample names generic for the same reason.
 
 There is no way to script taps on the simulator here, so verifying a screen other than 今日 means temporarily pointing `MainTabView.selection` (or `TodayPlanView`'s `day`) at what you want to see, screenshotting, then reverting. For the PDF, set `isExporting = true`, launch, and pull the file out of `xcrun simctl get_app_container ... data` under `tmp/Export`.
 

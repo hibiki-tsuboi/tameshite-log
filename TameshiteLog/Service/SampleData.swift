@@ -44,7 +44,7 @@ enum SampleData {
         // 飲み忘れのあるフェーズ。実施した日と実施しなかった日の比較を確かめるために、
         // 両側が最低日数を超えるように 1 日おきで作る。
         PhaseSpec(
-            name: "コレバイン単独", type: .intervention, days: 16, targetNames: ["コレバイン"],
+            name: "整腸剤単独", type: .intervention, days: 16, targetNames: ["整腸剤"],
             start: DayProfile(count: 1...3, bristol: 3...5, pain: 0...1, urgency: 0...1), end: nil,
             skipEvery: 2,
             skippedProfile: DayProfile(count: 3...5, bristol: 5...6, pain: 1...2, urgency: 1...2)
@@ -56,14 +56,14 @@ enum SampleData {
         ),
         // 立ち上がりを外す設定の確認用。効き始めるまでの数日を集計から抜く。
         PhaseSpec(
-            name: "イリボー単独", type: .intervention, days: 10, targetNames: ["イリボー"],
+            name: "下痢止め単独", type: .intervention, days: 10, targetNames: ["下痢止め"],
             warmupDays: 3,
             start: DayProfile(count: 4...4, bristol: 5...6, pain: 1...2, urgency: 1...2),
             end: DayProfile(count: 2...3, bristol: 4...5, pain: 0...1, urgency: 0...1)
         ),
         // 排便が 0 件の日が出るフェーズ。「排便なし」の明示を確かめるために下限を 0 にしている。
         PhaseSpec(
-            name: "イリボー + コレバイン", type: .intervention, days: 5, targetNames: ["イリボー", "コレバイン"],
+            name: "下痢止め + 整腸剤", type: .intervention, days: 5, targetNames: ["下痢止め", "整腸剤"],
             start: DayProfile(count: 0...2, bristol: 3...4, pain: 0...1, urgency: 0...0), end: nil
         ),
     ]
@@ -83,11 +83,11 @@ enum SampleData {
                 "さくら台内科クリニック",
                 "",
                 "Rp.",
-                "1) コレバイン ミニ83%",
+                "1) 整腸剤",
                 "   1回 1包 1日 2回",
                 "   朝食後・夕食後  14日分",
                 "",
-                "2) イリボー錠 5μg",
+                "2) 下痢止め",
                 "   1回 1錠 1日 1回  朝食後  14日分",
             ]
 
@@ -113,13 +113,17 @@ enum SampleData {
         let store = ObservationStore(context: context, calendar: calendar)
         store.deleteEverything()
 
-        let targets = ["コレバイン", "イリボー"].reduce(into: [String: ObservationTarget]()) { result, name in
+        // 名前は種類を表す一般名詞にしてある。ストアのスクリーンショットはこのサンプルデータから
+        // 撮るので、実在の商品名を入れると〈特定の処方薬〉と〈平均が何%減ったか〉が並んだ画像を
+        // 宣伝素材として公開することになる。アプリ自身は判断を出さない作りなのに、スクショだけが
+        // それを言ってしまう。商標の話でもあるが、こちらのほうが直しにくい。
+        let targets = ["整腸剤", "下痢止め"].reduce(into: [String: ObservationTarget]()) { result, name in
             result[name] = store.createTarget(name: name, type: .medication, note: "")
         }
 
         // 添付のある対象を 1 つ作っておく。写真は選ばないと入らないので、
         // これがないと添付まわりの見え方をサンプルデータから確かめられない。
-        if let target = targets["コレバイン"], let paper = placeholderPaper() {
+        if let target = targets["整腸剤"], let paper = placeholderPaper() {
             store.addAttachment(paper, to: target)
         }
 
