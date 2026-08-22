@@ -45,6 +45,9 @@ struct TameshiteLogApp: App {
             RootView()
                 // 画面の文言が日本語なので、DatePicker などシステムが描く部分も日本語に揃える。
                 .environment(\.locale, Formatting.locale)
+                // アセットの AccentColor はターゲット設定に入れてあるが、iOS では
+                // それだけだと SwiftUI の色が既定の青のままだった。根で一度当てておく。
+                .tint(Color(.accent))
         }
         .modelContainer(container)
     }
