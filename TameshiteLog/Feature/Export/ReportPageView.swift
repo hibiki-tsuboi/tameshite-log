@@ -35,7 +35,11 @@ enum ReportPage: Hashable {
 enum ReportPagination {
     static let phasesPerPage = 6
     static let chartsPerPage = 4
-    static let daysPerPage = 42
+    // 行は上端 80pt（余白 40 + 見出し 15 + 間隔 8 + 表頭 17）から 1 行 15pt で並ぶので、
+    // 脚注の帯が始まる 780pt までに入るのは 46 行。42 のままだと 4 行ぶん余らせたまま
+    // 次のページへ送るので、43 日の書き出しで 1 行だけのページができていた。
+    // 上限ちょうどでは字の高さが変わったときに黙って溢れるため、1 行ぶん残して 45。
+    static let daysPerPage = 45
 
     static func pages(for report: ObservationReport) -> [ReportPage] {
         var pages: [ReportPage] = []
@@ -266,43 +270,62 @@ struct ReportPageView: View {
 
     private let changeWidths: [CGFloat] = [170, 90, 85, 85, 85]
 
+    /// 基準ごとに表を分ける。
+    ///
+    /// 「いつもの状態」より前に始まったフェーズは直前の期間と比べられるので、同じ紙面に
+    /// 基準の違う行が並びうる。ひとつの見出しでまとめると、片方の行がもう片方の基準と
+    /// 比べたものとして読める。画面側はフェーズごとのカードなので、この取り違えは起きない。
     @ViewBuilder
     private func comparisonTable(_ summaries: [PhaseSummary]) -> some View {
         let ids = Set(summaries.map(\.id))
         let comparisons = report.comparisons.filter { ids.contains($0.subject.id) }
+        let kinds: [PhaseComparison.Reference] = [.baseline, .previous]
+            .filter { kind in comparisons.contains { $0.kind == kind } }
 
-        if !comparisons.isEmpty {
-            VStack(alignment: .leading, spacing: 6) {
-                sectionTitle(comparisons.first?.kind.label ?? "比較")
-
-                tableHeader(
-                    ["フェーズ", "平均排便回数", "便の形", "腹痛", "便意"],
-                    widths: changeWidths,
-                    alignments: [.leading, .trailing, .trailing, .trailing, .trailing]
-                )
-
-                ForEach(comparisons) { comparison in
-                    HStack(spacing: 0) {
-                        Text(comparison.subject.name)
-                            .font(ReportFont.table)
-                            .lineLimit(1)
-                            .frame(width: changeWidths[0], alignment: .leading)
-                        cell(delta(.bowelCount, in: comparison), width: changeWidths[1], alignment: .trailing, numeric: true)
-                        cell(delta(.bristol, in: comparison), width: changeWidths[2], alignment: .trailing, numeric: true)
-                        cell(delta(.abdominalPain, in: comparison), width: changeWidths[3], alignment: .trailing, numeric: true)
-                        cell(delta(.urgency, in: comparison), width: changeWidths[4], alignment: .trailing, numeric: true)
-                    }
-                    .padding(.vertical, 3)
-                    Divider().opacity(0.4)
-                }
-
-                if let reference = comparisons.first?.reference.name {
-                    Text("「\(reference)」との差です。かっこ内は変化率。")
-                        .font(ReportFont.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
+        ForEach(kinds, id: \.rawValue) { kind in
+            comparisonBlock(kind, comparisons.filter { $0.kind == kind })
         }
+    }
+
+    private func comparisonBlock(_ kind: PhaseComparison.Reference, _ comparisons: [PhaseComparison]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            sectionTitle(kind.label)
+
+            tableHeader(
+                ["フェーズ", "平均排便回数", "便の形", "腹痛", "便意"],
+                widths: changeWidths,
+                alignments: [.leading, .trailing, .trailing, .trailing, .trailing]
+            )
+
+            ForEach(comparisons) { comparison in
+                HStack(spacing: 0) {
+                    Text(comparison.subject.name)
+                        .font(ReportFont.table)
+                        .lineLimit(1)
+                        .frame(width: changeWidths[0], alignment: .leading)
+                    cell(delta(.bowelCount, in: comparison), width: changeWidths[1], alignment: .trailing, numeric: true)
+                    cell(delta(.bristol, in: comparison), width: changeWidths[2], alignment: .trailing, numeric: true)
+                    cell(delta(.abdominalPain, in: comparison), width: changeWidths[3], alignment: .trailing, numeric: true)
+                    cell(delta(.urgency, in: comparison), width: changeWidths[4], alignment: .trailing, numeric: true)
+                }
+                .padding(.vertical, 3)
+                Divider().opacity(0.4)
+            }
+
+            Text(comparisonNote(for: comparisons))
+                .font(ReportFont.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// 基準がひとつに定まるときだけ名前を書く。「直前の期間」は行ごとに基準が違うので、
+    /// 先頭の名前を代表として書くと、残りの行が別の期間と比べたものとして読める。
+    private func comparisonNote(for comparisons: [PhaseComparison]) -> String {
+        let names = Set(comparisons.map(\.reference.name))
+        guard names.count == 1, let name = names.first else {
+            return "各フェーズの直前の期間との差です。かっこ内は変化率。"
+        }
+        return "「\(name)」との差です。かっこ内は変化率。"
     }
 
     // MARK: - 推移
@@ -424,19 +447,22 @@ struct ReportPageView: View {
 
     /// 実施した日数を並べる。割合にはしない。チェックのない日は「実施していない」ではなく
     /// 「記録していない」なので、率にすると実態から離れる。
+    ///
+    /// 「8/16日」とは書かない。すぐ左の列が「7/19〜8/3」という月日の表記なので、
+    /// 同じ行に置くと 8 月 16 日と読める。分数に見せず日数として読ませる。
     private func adherenceText(for summary: PhaseSummary) -> String? {
         guard !summary.adherence.isEmpty else { return nil }
         if summary.adherence.count == 1, let item = summary.adherence.first {
-            return "実施 \(item.completedDays)/\(item.analyzedDays)日"
+            return "実施 \(item.analyzedDays)日中\(item.completedDays)日"
         }
         return summary.adherence
-            .map { "\($0.name) \($0.completedDays)/\($0.analyzedDays)日" }
+            .map { "\($0.name) \($0.analyzedDays)日中\($0.completedDays)日" }
             .joined(separator: " ・ ")
     }
 
     private func value(_ metric: ObservationMetric, in summary: PhaseSummary) -> String {
         guard let value = metric.value(in: summary) else { return "—" }
-        return Formatting.decimal(value)
+        return Formatting.fixedDecimal(value)
     }
 
     /// 差と変化率をひとつのセルに収める。単位は列見出しに任せる。
@@ -444,13 +470,13 @@ struct ReportPageView: View {
         guard let change = comparison.change(for: metric) else { return "—" }
         let rounded = (change.delta * 10).rounded() / 10
         guard rounded != 0 else { return "±0" }
-        guard let ratio = change.ratio else { return Formatting.signedDecimal(rounded) }
-        return "\(Formatting.signedDecimal(rounded))（\(Formatting.signedPercent(ratio))）"
+        guard let ratio = change.ratio else { return Formatting.signedFixedDecimal(rounded) }
+        return "\(Formatting.signedFixedDecimal(rounded))（\(Formatting.signedPercent(ratio))）"
     }
 
     private func optional(_ value: Double?) -> String {
         guard let value else { return "" }
-        return Formatting.decimal(value)
+        return Formatting.fixedDecimal(value)
     }
 
     private func weekday(_ date: Date) -> String {

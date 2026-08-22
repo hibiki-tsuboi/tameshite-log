@@ -12,6 +12,24 @@ enum Formatting {
         value.formatted(.number.precision(.fractionLength(0...1)).locale(locale))
     }
 
+    /// 表のセル用。小数第 1 位で桁を揃える。
+    ///
+    /// `decimal(_:)` は 4.0 を「4」と書く。文章の中ではそのほうが自然に読めるが、
+    /// 同じ列に 4.6 と並ぶと桁が揃わず、表として読みにくくなる。
+    static func fixedDecimal(_ value: Double) -> String {
+        value.formatted(.number.precision(.fractionLength(1)).locale(locale))
+    }
+
+    /// 表のセル用の差分。符号を付けたうえで小数第 1 位に揃える。
+    static func signedFixedDecimal(_ value: Double) -> String {
+        value.formatted(
+            .number
+                .precision(.fractionLength(1))
+                .sign(strategy: .always(includingZero: false))
+                .locale(locale)
+        )
+    }
+
     /// 差分。必ず符号を付けて増減の向きを明示する。
     static func signedDecimal(_ value: Double) -> String {
         value.formatted(

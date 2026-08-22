@@ -119,7 +119,7 @@ struct PhaseSummaryCard: View {
                             .font(.subheadline)
                             .lineLimit(1)
                         Spacer(minLength: 8)
-                        Text("実施 \(item.completedDays) / \(item.analyzedDays)日")
+                        Text("実施 \(item.analyzedDays)日中\(item.completedDays)日")
                             .font(.system(.subheadline, design: .rounded, weight: .semibold))
                             .monospacedDigit()
                     }
