@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this app is
 
-ためしてログ (TameshiteLog) — an iOS 26 app for logging daily bowel/symptom records and comparing **before and after starting, stopping, or changing something**. The first use case is diarrhea + medication, but the domain is deliberately generalized: the core concept is `ObservationTarget` (medication / supplement / food / exercise / lifestyle / other), never `Medication`.
+ブリストルログ (TameshiteLog) — an iOS 26 app for logging daily bowel/symptom records and comparing **before and after starting, stopping, or changing something**. The first use case is diarrhea + medication, but the domain is deliberately generalized: the core concept is `ObservationTarget` (medication / supplement / food / exercise / lifestyle / other), never `Medication`.
 
 Japanese-only UI, single app target, no dependencies, no test target, all data on-device (SwiftData, no account, no network).
 
@@ -19,7 +19,7 @@ xcodebuild -project TameshiteLog.xcodeproj -scheme TameshiteLog \
 xcrun simctl boot "iPhone 17 Pro"
 xcrun simctl install "iPhone 17 Pro" \
   "$(ls -dt ~/Library/Developer/Xcode/DerivedData/TameshiteLog-*/Build/Products/Debug-iphonesimulator/TameshiteLog.app | head -1)"
-xcrun simctl launch "iPhone 17 Pro" jp.hibiki.TameshiteLog -sampleData
+xcrun simctl launch "iPhone 17 Pro" jp.hibiki.bristollog -sampleData
 xcrun simctl io "iPhone 17 Pro" screenshot shot.png
 ```
 
@@ -105,4 +105,4 @@ The pickers and the store are a pair. `closePhases` clamps with `max(previousDay
 - **Japanese formatting is pinned**, not inherited from the device: `Formatting.locale` is `ja_JP` and the root view sets `.environment(\.locale, Formatting.locale)` so system-drawn controls match the hardcoded Japanese copy.
 - **`SymptomLevel.absent`, not `.none`** — `.none` collides with `Optional.none` at use sites.
 - **There is no `Info.plist` file** (`GENERATE_INFOPLIST_FILE = YES`); new keys go in as `INFOPLIST_KEY_*` build settings — but not every key works that way. `CFBundleDevelopmentRegion` is generated from `DEVELOPMENT_LANGUAGE` (the project's `developmentRegion`), so an `INFOPLIST_KEY_CFBundleDevelopmentRegion` is silently ignored. After adding a key, check the built `.app/Info.plist` with PlistBuddy rather than assuming the setting took.
-- **The home-screen name is `CFBundleDisplayName` (ためしてログ), not the target name.** `CFBundleName` stays `TameshiteLog`; renaming the target would not change what users see.
+- **The home-screen name is `CFBundleDisplayName` (ブリストルログ), not the target name.** `CFBundleName` stays `TameshiteLog`; renaming the target would not change what users see. The bundle identifier is `jp.hibiki.bristollog`, which matches neither — every `simctl` command wants the identifier, and passing the target name fails with `Simulator device failed to launch` rather than "no such app".

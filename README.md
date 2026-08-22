@@ -1,4 +1,4 @@
-# ためしてログ
+# ブリストルログ
 
 変えてみたことと、からだの変化を記録して、**その前後を見くらべる**ための iOS アプリです。
 
@@ -105,7 +105,7 @@ DEBUG ビルドでは `-sampleData` を付けて起動すると、6 週間ぶん
 画面の確認にはこれが一番早いです。
 
 ```bash
-xcrun simctl launch "iPhone 17 Pro" jp.hibiki.TameshiteLog -sampleData
+xcrun simctl launch "iPhone 17 Pro" jp.hibiki.bristollog -sampleData
 ```
 
 このデータは UI と動作の確認用に作った架空のもので、医学的な効果を表すものではありません。
