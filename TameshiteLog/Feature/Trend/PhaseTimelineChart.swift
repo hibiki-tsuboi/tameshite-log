@@ -96,6 +96,10 @@ struct PhaseTimelineChart: View {
         .chartXAxisLabel(alignment: .trailing) { Text("日付") }
         .chartYAxisLabel(alignment: .leading) { Text(metric.axisLabel) }
         .frame(height: height)
+        // 高さと目盛りの本数が決まっているので、ラベルだけが伸びると
+        // 縦軸の数字も横軸の日付も互いに重なって読めなくなる。紙面が
+        // `ReportPageView` で拡大を止めているのと同じ理由で、ここでも上限を置く。
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
     }
 
     // 帯とグラフの点を揃えるため、日の前後に半日ずつ広げて日付の中心に点が来るようにする。

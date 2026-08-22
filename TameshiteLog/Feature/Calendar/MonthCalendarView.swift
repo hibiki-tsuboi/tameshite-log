@@ -214,6 +214,10 @@ private struct DayCell: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 6)
+        // 7 列のグリッドは 1 マスの幅が画面で決まるので、文字だけが伸びると
+        // 2 桁の日付が枠に収まらず「1」しか見えなくなる。11 日と 15 日の区別が
+        // つかないマスは日付として読めないので、ここだけ拡大の上限を決める。
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 10))
         .opacity(isInDisplayedMonth ? (isFuture ? 0.5 : 1) : 0.4)
         .accessibilityElement(children: .ignore)
