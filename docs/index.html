@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ブリストルログ サポート</title>
+<meta name="description" content="iOS アプリ「ブリストルログ」のサポートページ。お問い合わせ先、よくある質問、プライバシーポリシー。">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbf9f5;
+    --panel: #ffffff;
+    --text: #24211d;
+    --muted: #6b655c;
+    --line: #e4ded3;
+    --link: #8a5a2b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #191715;
+      --panel: #222020;
+      --text: #ece7e0;
+      --muted: #a49d93;
+      --line: #383430;
+      --link: #d9a86a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2.5rem 1.25rem 4rem;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+    font-size: 16px;
+    line-height: 1.9;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 40rem; margin: 0 auto; }
+  h1 { font-size: 1.5rem; line-height: 1.5; margin: 0 0 .25rem; }
+  h2 {
+    font-size: 1.0625rem;
+    margin: 2.5rem 0 .5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+  }
+  h3 { font-size: 1rem; margin: 1.5rem 0 .25rem; }
+  p, ul { margin: .75rem 0; }
+  ul { padding-left: 1.35rem; }
+  li { margin: .35rem 0; }
+  a { color: var(--link); }
+  .lede { color: var(--muted); margin-bottom: 2rem; }
+  .contact {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: .75rem;
+    padding: 1rem 1.125rem;
+    margin: 1.25rem 0;
+  }
+  .contact p { margin: .25rem 0; }
+  .mail { font-size: 1.0625rem; }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: .875rem;
+  }
+  footer p { margin: .25rem 0; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>ブリストルログ</h1>
+<p class="lede">変えてみたことと、からだの変化を記録して、その前後を見くらべるための iOS アプリです。</p>
+
+<h2>お問い合わせ</h2>
+<div class="contact">
+  <p class="mail"><a href="mailto:hibiki.tsuboi@icloud.com">hibiki.tsuboi@icloud.com</a></p>
+  <p>不具合の報告、ご要望、ご質問はこちらへお送りください。個人で開発・運営しているため、返信までに数日いただくことがあります。</p>
+</div>
+<p>不具合の報告では、次があると原因を追いやすくなります：iOS のバージョン、アプリのバージョン（設定 &gt; アプリについて に表示されます）、どの画面でどう操作したか。</p>
+
+<h2>よくある質問</h2>
+
+<h3>記録は他の端末と同期されますか？</h3>
+<p>いいえ。記録は端末の中だけに保存され、iCloud 同期には対応していません。控えを残すには「経過」画面または「設定 &gt; 書き出し」から CSV・PDF を保存してください。</p>
+
+<h3>端末を買い替えたら記録は移りますか？</h3>
+<p>iCloud バックアップやパソコンへのバックアップから新しい端末を復元した場合は、その中に本アプリのデータも含まれます。アプリ単体での移行機能は用意していません。</p>
+
+<h3>記録を消したいのですが</h3>
+<p>「設定 &gt; データ管理」から、記録だけを消すか、プランや観察対象を含めてすべて消すかを選べます。どちらも取り消せないので、必要なら先に書き出してください。</p>
+
+<h3>平均が思っていた数字と違います</h3>
+<p>平均の分母は「記録がある日数」です。記録のない日は、0 回だったのか書いていないのか区別できないため、集計から外しています。0 回だった日は「排便はなかった」を押すと 0 として数えられます。画面には「7日間（記録 6日）」のように、何日ぶんを基準にした数字かを併記しています。</p>
+
+<h3>差が出ているのに、文章が表示されません</h3>
+<p>「少なくなっています」のような一文は、比べる両側に 7 日ぶんの記録がそろってから表示します。1 日分の記録から割合を言い切らないためです。数値の差はそれまでも表示されます。</p>
+
+<h3>効いているかどうかは分かりますか？</h3>
+<p>本アプリは、記録から計算した数値とその差を示すところまでを受け持ちます。「効いています」「続けてください」といった判断は表示しません。服薬や症状については医師・薬剤師にご相談ください。</p>
+
+<h3>観察対象に添えた写真は、書き出したファイルに入りますか？</h3>
+<p>入りません。処方箋には氏名や保険者番号が載っており、PDF や CSV は人に渡すために作るものだからです。写真は端末内での参照用です。</p>
+
+<h3>グラフに、平均の線から外れた点があります</h3>
+<p>フェーズごとに「開始直後の数日を集計から外す」設定があります。外した日の記録は消えず、グラフにも点が出ますが、平均と比較の分母からは抜いています。</p>
+
+<h2>動作環境</h2>
+<p>iOS 26.0 以降。日本語のみ。</p>
+
+<h2>プライバシー</h2>
+<p>アカウント登録なし、外部サーバーへの送信なし、記録は端末内にのみ保存されます。詳しくは<a href="./privacy.html">プライバシーポリシー</a>をご覧ください。</p>
+
+<footer>
+  <p>ブリストルログ 開発者：hibiki tsuboi</p>
+  <p><a href="./privacy.html">プライバシーポリシー</a></p>
+</footer>
+
+</main>
+</body>
+</html>

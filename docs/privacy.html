@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>プライバシーポリシー | ブリストルログ</title>
+<meta name="description" content="iOS アプリ「ブリストルログ」のプライバシーポリシー。記録は端末内にのみ保存され、外部への送信はありません。">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbf9f5;
+    --panel: #ffffff;
+    --text: #24211d;
+    --muted: #6b655c;
+    --line: #e4ded3;
+    --link: #8a5a2b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #191715;
+      --panel: #222020;
+      --text: #ece7e0;
+      --muted: #a49d93;
+      --line: #383430;
+      --link: #d9a86a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2.5rem 1.25rem 4rem;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+    font-size: 16px;
+    line-height: 1.9;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 40rem; margin: 0 auto; }
+  h1 { font-size: 1.5rem; line-height: 1.5; margin: 0 0 .25rem; }
+  h2 {
+    font-size: 1.0625rem;
+    margin: 2.5rem 0 .5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+  }
+  p, ul { margin: .75rem 0; }
+  ul { padding-left: 1.35rem; }
+  li { margin: .35rem 0; }
+  a { color: var(--link); }
+  .lede { color: var(--muted); margin-bottom: 2rem; }
+  .note {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: .75rem;
+    padding: .875rem 1.125rem;
+    margin: 1.25rem 0;
+  }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: .875rem;
+  }
+  footer p { margin: .25rem 0; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>プライバシーポリシー</h1>
+<p class="lede">iOS アプリ「ブリストルログ」（以下、本アプリ）における個人情報の取り扱いについて定めたものです。</p>
+
+<p>本アプリは、記録を<strong>端末の中だけ</strong>に保存します。アカウント登録はなく、記録を外部のサーバーへ送信することもありません。作者が利用者の記録を見ることはできません。</p>
+
+<h2>1. 収集する情報</h2>
+<p>本アプリは、利用者の情報を収集しません。外部への通信を行う機能を持たないため、次に挙げるものはすべて、利用者の端末内に保存されるだけです。</p>
+<ul>
+  <li>排便の記録（日時、ブリストル便形状スケールの値、腹痛・急な便意の程度、メモ）</li>
+  <li>1 日のまとめ（全体的な体調、腹部の調子、メモ）</li>
+  <li>観察プランとフェーズ（名前、開始日、終了日）</li>
+  <li>観察対象（名前、種類、メモ）とその実施記録</li>
+  <li>観察対象に添えた写真</li>
+  <li>アプリの設定（リマインダーの有無と時刻など）</li>
+</ul>
+
+<h2>2. 保存場所</h2>
+<p>上記のデータは、端末内のアプリ領域（SwiftData）に保存されます。iCloud 同期や他の端末との共有は行いません。</p>
+<div class="note">
+  <p>ただし、利用者が iCloud バックアップやパソコンへのバックアップを有効にしている場合、Apple の仕組みによって本アプリのデータもバックアップに含まれます。これは iOS 全体の機能であり、本アプリが選べる範囲の外にあります。取り扱いは Apple のプライバシーポリシーに従います。</p>
+</div>
+
+<h2>3. カメラと写真</h2>
+<p>本アプリは、観察対象に処方箋や薬の説明書の控えを添えるために、カメラと写真の読み込みを使います。</p>
+<ul>
+  <li><strong>カメラ</strong>は、利用者が撮影を始めたときにだけ起動します。撮った写真は端末内にのみ保存されます。</li>
+  <li><strong>写真の読み込み</strong>は、利用者が選んだ 1 枚ごとに受け取る仕組み（PhotosPicker）を使っています。写真ライブラリ全体へのアクセス許可は求めません。</li>
+  <li>取り込んだ写真は、保存する前に縮小して作り直します。このとき Exif は引き継がれないため、<strong>撮影日時や撮影場所の座標は保存されません</strong>。</li>
+  <li>添えた写真は、<strong>PDF レポートと CSV には含まれません</strong>。処方箋には氏名・生年月日・保険者番号・医療機関名が載っており、書き出したファイルは人に渡すために作るものだからです。</li>
+</ul>
+
+<h2>4. 通知</h2>
+<p>1 日 1 回の記録リマインダーは、端末内で組み立てるローカル通知です。サーバーを経由しません。通知を許可しなくても、記録・集計を含むその他の機能はすべて使えます。</p>
+
+<h2>5. 書き出しと共有</h2>
+<p>PDF レポートと CSV は、利用者が「書き出す」を操作したときにだけ作られます。作られたファイルの送り先は、iOS の共有画面で利用者が選びます。送信先での取り扱いは、そのサービスの提供者や受け取った人に委ねられます。</p>
+
+<h2>6. 第三者への提供・外部サービス</h2>
+<p>本アプリは、解析ツール・広告・クラッシュレポートを含め、第三者の SDK を一切組み込んでいません。外部サービスへの通信を行わないため、第三者へ情報を提供することもありません。広告識別子（IDFA）の取得や、他社のアプリ・Web サイトを横断した追跡（トラッキング）も行いません。</p>
+
+<h2>7. データの削除</h2>
+<ul>
+  <li>アプリ内の「設定 &gt; データ管理」から、記録だけを削除すること、プランや観察対象を含めてすべて削除することができます。</li>
+  <li>本アプリを端末から削除すると、端末内のデータも一緒に削除されます。</li>
+</ul>
+<p>いずれも取り消せません。削除の前に控えを残したい場合は、「書き出し」から CSV や PDF を保存してください。なお、バックアップを有効にしている場合は、そのバックアップから復元されることがあります。</p>
+
+<h2>8. お子さまの利用について</h2>
+<p>本アプリは年齢を問わず情報を収集しません。年齢や本人確認のための情報を求めることもありません。</p>
+
+<h2>9. 医療に関するご注意</h2>
+<p>本アプリは日々の記録・振り返りを目的としたもので、診断や治療方針を提供するものではありません。画面に表示されるのは、記録から計算した数値とその差だけです。服薬や症状については医師・薬剤師にご相談ください。</p>
+
+<h2>10. 本ポリシーの変更</h2>
+<p>内容を変更する場合は、このページを更新し、下記の改定日を書き換えます。データの取り扱いに関わる変更を行うときは、アプリの更新に合わせて反映します。</p>
+
+<h2>11. お問い合わせ</h2>
+<p>本アプリおよび本ポリシーに関するお問い合わせは、次のアドレスへお願いします。個人で開発・運営しているため、返信までに数日いただくことがあります。</p>
+<p><a href="mailto:hibiki.tsuboi@icloud.com">hibiki.tsuboi@icloud.com</a></p>
+
+<footer>
+  <p>制定日：2026年8月22日</p>
+  <p>最終更新日：2026年8月22日</p>
+  <p>ブリストルログ 開発者：hibiki tsuboi</p>
+  <p><a href="./">サポートページ</a></p>
+</footer>
+
+</main>
+</body>
+</html>
