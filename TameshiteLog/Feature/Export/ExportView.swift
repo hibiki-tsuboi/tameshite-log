@@ -190,7 +190,8 @@ struct ExportView: View {
                         .scaleEffect(Self.previewScale, anchor: .topLeading)
                         .frame(
                             width: ReportLayout.pageSize.width * Self.previewScale,
-                            height: ReportLayout.pageSize.height * Self.previewScale
+                            height: ReportLayout.pageSize.height * Self.previewScale,
+                            alignment: .topLeading
                         )
                         .overlay(Rectangle().stroke(Color.primary.opacity(0.15), lineWidth: 0.5))
                         .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
