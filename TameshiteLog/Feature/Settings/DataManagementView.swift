@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import UniformTypeIdentifiers
 
 struct DataManagementView: View {
     @Environment(\.modelContext) private var context
@@ -11,10 +10,7 @@ struct DataManagementView: View {
     @State private var transferFile: URL?
     @State private var isCreatingTransferFile = false
     @State private var isChoosingTransferFile = false
-    /// 読み込めたが、まだ適用していないファイルの中身。確認を挟むために持つ。
-    @State private var pendingArchive: TransferArchive?
-    @State private var isConfirmingRestore = false
-    @State private var transferError: String?
+    @State private var creationError: String?
 
     var body: some View {
         Form {
@@ -122,40 +118,26 @@ struct DataManagementView: View {
         } message: {
             Text("プラン・フェーズ・観察対象・記録がすべて消えます。この操作は取り消せません。")
         }
-        .fileImporter(isPresented: $isChoosingTransferFile, allowedContentTypes: [.json]) { result in
-            loadTransferFile(result)
-        }
-        .confirmationDialog(
-            "引き継ぎファイルから復元しますか？",
-            isPresented: $isConfirmingRestore,
-            titleVisibility: .visible
-        ) {
-            Button("復元", role: .destructive) { restore() }
-            Button("キャンセル", role: .cancel) { pendingArchive = nil }
+        // 復元したら、作り置きのファイルはいま入れた中身より古い。共有できるまま残さない。
+        .transferRestore(isPresented: $isChoosingTransferFile) { transferFile = nil }
+        .alert("作成できませんでした", isPresented: hasCreationError) {
+            Button("OK") { creationError = nil }
         } message: {
-            if let pendingArchive {
-                // 中身と作った日を出す。選んだファイルが目的のものかは、名前だけでは読めない。
-                Text("\(Formatting.mediumDate(pendingArchive.createdAt))に作成 ・ \(pendingArchive.contentDescription)\n\nいまのデータはすべて置き換わります。この操作は取り消せません。")
-            }
-        }
-        .alert("読み込めませんでした", isPresented: hasTransferError) {
-            Button("OK") { transferError = nil }
-        } message: {
-            if let transferError {
-                Text(transferError)
+            if let creationError {
+                Text(creationError)
             }
         }
     }
 
     // MARK: - 引き継ぎ
 
-    private var hasTransferError: Binding<Bool> {
-        Binding(get: { transferError != nil }, set: { if !$0 { transferError = nil } })
+    private var hasCreationError: Binding<Bool> {
+        Binding(get: { creationError != nil }, set: { if !$0 { creationError = nil } })
     }
 
     private func createTransferFile() {
         isCreatingTransferFile = true
-        transferError = nil
+        creationError = nil
         Task {
             do {
                 // 組み立ては SwiftData を読むのでメインのまま。JSON にするところだけ外へ出す。
@@ -169,54 +151,9 @@ struct DataManagementView: View {
                 try data.write(to: url, options: .atomic)
                 transferFile = url
             } catch {
-                transferError = "引き継ぎファイルを作成できませんでした。"
+                creationError = "引き継ぎファイルを作成できませんでした。"
             }
             isCreatingTransferFile = false
-        }
-    }
-
-    private func loadTransferFile(_ result: Result<URL, Error>) {
-        guard case let .success(url) = result else { return }
-        Task {
-            // アプリの外のファイルなので、読む間だけ許可を取る。
-            let accessing = url.startAccessingSecurityScopedResource()
-            defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-
-            do {
-                let data = try Data(contentsOf: url)
-                let archive = try await Task.detached {
-                    try JSONDecoder().decode(TransferArchive.self, from: data)
-                }.value
-                guard archive.formatVersion <= TransferArchive.currentFormatVersion else {
-                    transferError = "このファイルは新しいバージョンのアプリで作られています。アプリを更新してから読み込んでください。"
-                    return
-                }
-                pendingArchive = archive
-                isConfirmingRestore = true
-            } catch {
-                transferError = "ファイルを読み取れませんでした。引き継ぎファイルかどうか確かめてください。"
-            }
-        }
-    }
-
-    private func restore() {
-        guard let archive = pendingArchive else { return }
-        pendingArchive = nil
-        do {
-            try ObservationStore(context: context).restore(from: archive)
-        } catch {
-            // 保存が通らなければ何も書き換わっていない。
-            transferError = "復元できませんでした。いまのデータはそのまま残っています。"
-            return
-        }
-        // 作り置きのファイルは、いま入れた中身より古い。共有できるまま残さない。
-        transferFile = nil
-        Task {
-            await NotificationService.refreshDailyReminder(
-                enabled: archive.reminder.isEnabled,
-                hour: archive.reminder.hour,
-                minute: archive.reminder.minute
-            )
         }
     }
 }

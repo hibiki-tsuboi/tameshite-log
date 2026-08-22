@@ -413,6 +413,21 @@ struct ObservationStore {
 
     // MARK: - 引き継ぎ
 
+    /// いま端末に入っているものを、引き継ぎファイルと同じ言葉の件数で一行にする。
+    /// 復元で置き換わる側の量を言うために使う。何も入っていなければ `nil`。
+    ///
+    /// 数えるだけなので `makeTransferArchive()` は通さない。あちらは写真の実体まで読むので、
+    /// 確認のダイアログを出すだけで数 MB を展開することになる。
+    func contentDescription() -> String? {
+        TransferArchive.describeContent(
+            plans: count(ObservationPlan.self),
+            targets: count(ObservationTarget.self),
+            movements: count(BowelMovement.self),
+            summaries: count(DailyRecord.self),
+            photos: count(TargetAttachment.self)
+        )
+    }
+
     /// 端末を移すための書き出し。写真も含めた全データを素の値に写す。
     func makeTransferArchive(createdAt: Date = .now) -> TransferArchive {
         var idByTarget: [PersistentIdentifier: UUID] = [:]
@@ -608,6 +623,12 @@ struct ObservationStore {
     ) -> [Model] {
         let items = (try? context.fetch(FetchDescriptor<Model>())) ?? []
         return items.sorted { $0[keyPath: keyPath] < $1[keyPath: keyPath] }
+    }
+
+    /// 件数だけ要るときはモデルを取り出さない。写真は 1 件が数 MB あるので、
+    /// 数えるために fetch すると外部ストレージまで読みに行くことになる。
+    private func count<Model: PersistentModel>(_ type: Model.Type) -> Int {
+        (try? context.fetchCount(FetchDescriptor<Model>())) ?? 0
     }
 
     // MARK: - データ管理

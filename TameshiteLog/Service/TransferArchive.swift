@@ -30,14 +30,34 @@ nonisolated struct TransferArchive: Codable, Sendable {
 
     /// 復元の前に「何が入っているファイルか」を出すための一行。
     var contentDescription: String {
+        Self.describeContent(
+            plans: plans.count,
+            targets: targets.count,
+            movements: movements.count,
+            summaries: summaries.count,
+            photos: targets.reduce(0) { $0 + $1.attachments.count }
+        ) ?? "記録は入っていません"
+    }
+
+    /// 中身を件数の一行にする。ファイル側と端末側の両方から呼ぶので、言葉はここだけに置く。
+    /// 復元の確認では入ってくる側と置き換わる側を並べるので、数え方が揃っていないと比べられない。
+    ///
+    /// 何も入っていなければ `nil`。それを「入っていません」と書くか、その一文自体を出さないかは
+    /// 読む場面で変わるので、決めるのは呼ぶ側。
+    static func describeContent(
+        plans: Int,
+        targets: Int,
+        movements: Int,
+        summaries: Int,
+        photos: Int
+    ) -> String? {
         var parts: [String] = []
-        if !plans.isEmpty { parts.append("プラン \(plans.count)件") }
-        if !targets.isEmpty { parts.append("観察対象 \(targets.count)件") }
-        if !movements.isEmpty { parts.append("排便 \(movements.count)件") }
-        if !summaries.isEmpty { parts.append("まとめ \(summaries.count)日") }
-        let photos = targets.reduce(0) { $0 + $1.attachments.count }
+        if plans > 0 { parts.append("プラン \(plans)件") }
+        if targets > 0 { parts.append("観察対象 \(targets)件") }
+        if movements > 0 { parts.append("排便 \(movements)件") }
+        if summaries > 0 { parts.append("まとめ \(summaries)日") }
         if photos > 0 { parts.append("写真 \(photos)枚") }
-        return parts.isEmpty ? "記録は入っていません" : parts.joined(separator: " ・ ")
+        return parts.isEmpty ? nil : parts.joined(separator: " ・ ")
     }
 
     /// リマインダーの設定。記録ではないが、移した先で鳴らないと移した気がしない。
