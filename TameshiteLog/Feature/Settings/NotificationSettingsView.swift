@@ -9,6 +9,7 @@ struct NotificationSettingsView: View {
     @AppStorage(AppStorageKey.reminderMinute) private var minute = 0
 
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @State private var status: UNAuthorizationStatus = .notDetermined
 
     var body: some View {
@@ -48,7 +49,14 @@ struct NotificationSettingsView: View {
         .appBackground()
         .navigationTitle("通知")
         .navigationBarTitleDisplayMode(.inline)
-        .task { status = await NotificationService.authorizationStatus() }
+        .task { await syncWithSystem() }
+        // 「設定を開く」で iOS 側の許可を変えて戻ってくる経路がある。復帰のたびに
+        // 読み直さないと、許可したのに「許可されていません」が残り、取り消したのに
+        // トグルだけ入ったまま（通知は鳴らない）になる。
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await syncWithSystem() }
+        }
         .onChange(of: isEnabled) { _, _ in Task { await apply() } }
         .onChange(of: hour) { _, _ in Task { await apply() } }
         .onChange(of: minute) { _, _ in Task { await apply() } }
@@ -63,6 +71,19 @@ struct NotificationSettingsView: View {
                 minute = components.minute ?? minute
             }
         )
+    }
+
+    /// 端末側の許可状態を読み直し、画面と登録をそれに合わせる。
+    ///
+    /// 許可が外れているのにトグルが入ったままだと、鳴らない通知を設定済みとして見せてしまう。
+    /// トグルを倒すと `onChange(of: isEnabled)` から `apply()` が走り、登録も一緒に外れる。
+    private func syncWithSystem() async {
+        status = await NotificationService.authorizationStatus()
+        if isEnabled, status != .authorized {
+            isEnabled = false
+            return
+        }
+        await NotificationService.refreshDailyReminder(enabled: isEnabled, hour: hour, minute: minute)
     }
 
     /// 設定を通知センターへ反映する。許可が下りなければトグルを元に戻す。

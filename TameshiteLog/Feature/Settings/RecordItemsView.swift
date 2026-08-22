@@ -17,7 +17,7 @@ struct RecordItemsView: View {
         Item(title: "急な便意", detail: "なし / 軽い / 中程度 / 強い", symbolName: "exclamationmark.triangle"),
         Item(title: "全体的な体調", detail: "良い / 普通 / 悪い", symbolName: "face.smiling"),
         Item(title: "腹部の調子", detail: "良い / 普通 / 悪い", symbolName: "circle.dashed"),
-        Item(title: "観察対象の実施状況", detail: "実施の有無と時刻", symbolName: "checkmark.circle"),
+        Item(title: "観察対象の実施状況", detail: "実施の有無", symbolName: "checkmark.circle"),
         Item(title: "メモ", detail: "1 回ごと・1 日ごと", symbolName: "text.alignleft"),
     ]
 

@@ -115,6 +115,14 @@ struct PhaseStartSheet: View {
                 // 最後のフェーズが今日始まっていると、既定の「今日」が下限を下回る。
                 // 範囲外の値を持ったままだとピッカーの表示と実際の値が食い違う。
                 startDate = min(max(startDate, startRange.lowerBound), startRange.upperBound)
+
+                // 既定の種類ぶんの名前もここで入れる。下の onChange は種類を
+                // 触ったときしか走らないので、既定の「試している期間」をそのまま使う人には
+                // 自動命名が一度も効かず、開いた直後は「開始」が押せないままになる。
+                if name.isEmpty {
+                    autofilledName = store.uniquePhaseName(type.label, in: plan)
+                    name = autofilledName
+                }
             }
             .onChange(of: type) { _, newValue in
                 // 種類を選んだだけで名前が埋まると、そのまま保存できて速い。

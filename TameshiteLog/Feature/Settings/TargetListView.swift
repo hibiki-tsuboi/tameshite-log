@@ -79,6 +79,11 @@ struct TargetEditorView: View {
                         Label(type.label, systemImage: type.symbolName).tag(type)
                     }
                 }
+            } footer: {
+                // 1 日のまとめは入力した時点で保存される。同じアプリの中に
+                // 2 つの流儀があるので、こちらが押すまで書かない側であることは書いておく。
+                // 写真も同じ扱いで、並べた時点ではまだ添付になっていない。
+                Text("名前・種類・メモ・写真は、「保存」を押したときにまとめて反映されます。")
             }
 
             Section("メモ") {
