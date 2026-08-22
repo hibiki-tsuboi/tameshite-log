@@ -6,9 +6,11 @@
 
 ## 0. 先に一番重要な制約
 
-`project.pbxproj` は `TARGETED_DEVICE_FAMILY = "1,2"`、生成された `Info.plist` の
-`UISupportedInterfaceOrientations` は iPhone / iPad とも **縦横どちらも許可** されている。
-つまり同じ画像が 9:19.5（iPhone 縦）から 4:3 横（iPad 横）まで引き伸ばされる。
+`project.pbxproj` は `TARGETED_DEVICE_FAMILY = "1,2"`。生成された `Info.plist` の
+`UISupportedInterfaceOrientations` は、iPhone は縦のみ、**iPad は縦横どちらも許可**
+されている。iPad は Split View や Stage Manager で好きな比率に置かれるので、向きを
+固定しても意味がない。つまり同じ画像が 9:19.5（iPhone 縦）から 4:3 横（iPad 横）まで
+引き伸ばされる。
 
 **縦長の絵を作ると破綻する。**
 
