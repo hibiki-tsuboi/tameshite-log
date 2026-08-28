@@ -1,0 +1,37 @@
+PREVIOUS SUBMISSION (4.3(a))
+Our previous screenshots did not show what this app is for: the first two showed a daily log screen and a Bristol scale picker, both common to this category, and the comparison view - the actual product - was absent. Screenshots replaced, keyword field rewritten, analysis screen reordered so the comparison sits directly under each phase's averages.
+
+WHAT THIS APP DOES THAT LOGGING APPS DO NOT
+The user logs bowel movements (Bristol Stool Form Scale 1-7), pain, urgency and a daily summary, and registers the thing they are trying - medication, supplement, food change, exercise or habit.
+
+The timeline is then divided into phases with explicit start and end dates (baseline / trying it / break). The app reports each phase's averages against the baseline's, with the min-max range beside every average and the number of recorded days behind it. Within one phase it also separates days marked "did it" from days marked "did not do it" and reports those two groups separately. Records are three-state (not logged / did it / did not do it), so a day that was never logged is never counted as a day the user skipped.
+
+We surveyed the Japanese App Store first (iTunes Search API; 1,035 retrieved, 225 with bowel or gut logging as their subject after removing games, toilet finders and unrelated results). Of those 225, apps comparing "days it was done" against "days it was not": 0. Two describe a before/after comparison - one around a marker (a point in time), one against the preceding rolling period - and neither compares periods the user defines with a start and an end date. Raw data available.
+
+CODE AND ASSETS
+Written from scratch. No third-party SDK, dependency manager (SPM, CocoaPods, Carthage), purchased or generated template, or networking code. A single target on Apple frameworks only: SwiftUI, SwiftData, Swift Charts, PhotosUI, VisionKit, UserNotifications.
+
+Our account has other apps. We compared this app's sources against all of them: zero Swift files are identical across any two of our projects, zero exceed 60% similarity with this app, zero image or audio assets are shared. Each is built on different frameworks for a different purpose - RoomPlan, NearbyInteraction, ARKit, CoreLocation, SpriteKit. Source or commit history on request.
+
+NO MEDICAL CLAIMS
+The app states measured differences and nothing more. The only sentence it composes reads: "In the records, compared with the baseline, the average number of bowel movements is 1.4 per day lower (-58%)." It never says whether something is working and gives no diagnosis or advice. A difference becomes a sentence only once both sides have 7+ days of records. Settings > About directs the user to their physician or pharmacist.
+
+PRIVACY AND CAMERA
+No accounts, server, network calls, analytics or advertising. Data leaves the device only via Export or a transfer file, through the share sheet. The camera is optional (Settings > Observation targets), for a photo of one's own prescription; those images are re-encoded to drop Exif/GPS and are excluded from every export.
+
+ATTACHED VIDEO
+A new install starts empty and the comparison needs ~2 weeks of records, so the video uses a build pre-seeded with fictitious sample data; the submitted build contains none. The screenshots use the same data.
+
+TO REACH THE COMPARISON ON A FRESH INSTALL
+1. First screen: tap the primary button, create a plan.
+2. Calendar tab: tap any past date to open that day's editors; backfill about a week. Future dates are intentionally not tappable.
+3. Today tab: start a second phase from the top card, then backfill several more days.
+4. Trend tab: scroll to the second phase card. Both comparisons appear there.
+
+SCREEN NAMES (Japanese-only UI)
+今日 = Today / 経過 = Trend / カレンダー = Calendar / 設定 = Settings
+いつもの状態 = baseline / フェーズ = phase
+いつもの状態と比較 = compared with the baseline
+実施した日と実施しなかった日 = days done vs days not done
+
+No IAP, ads, user-generated content or login. iPhone portrait-only; iPad supported.

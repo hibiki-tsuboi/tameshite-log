@@ -1,0 +1,38 @@
+Thank you for the review. We are not disputing the decision. We would like to add
+information that was not visible in what we submitted, and to say what we have changed.
+
+We accept that our screenshots did not show what this app is for. The first two showed a
+daily log screen and a Bristol stool scale picker - both common to this category - and the
+comparison view, which is the actual purpose of the app, did not appear anywhere in the set.
+As submitted, the page did read as one more logging app.
+
+WHAT THE APP DOES THAT LOGGING APPS DO NOT
+The user divides their own timeline into phases with explicit start and end dates (baseline /
+trying it / break). Each phase's averages are reported against the baseline's, with the
+min-max range beside every average and the number of recorded days behind it. Within a single
+phase the app also separates days the user marked "did it" from days marked "did not do it",
+and reports those two groups separately. Records are three-state - not logged / did it / did
+not do it - so a day that was never logged is never counted as a day the user skipped.
+
+Before writing this we surveyed the Japanese App Store (iTunes Search API; 1,035 apps
+retrieved; 225 have bowel or gut logging as their subject, after removing games, toilet
+finders and unrelated results). Of those 225, the number comparing "days
+the thing was done" against "days it was not" is zero. Two describe a before/after comparison
+- one around a marker, which is a point in time, and one against the preceding rolling period
+- and neither compares periods that the user defines with a start and an end date. We are glad
+to supply the full data set.
+
+ON SHARED CODE AND ASSETS
+This app was written from scratch, with no third-party SDK, no dependency manager and no
+purchased or generated template. Our account has other apps, and we compared this app's
+sources against all of them before writing: zero Swift files are identical across any two of
+our projects, zero exceed 60% similarity with this app, and zero image or audio assets are
+shared. Each is built on different frameworks for a different purpose. Source or commit
+history is available on request.
+
+WHAT WE ARE CHANGING
+We are resubmitting with the screenshot set replaced so the comparison is the first thing
+shown, a rewritten keyword field, and the analysis screen reordered so the comparison sits
+directly beneath each phase's averages. The App Review Notes carry the same detail plus a
+step-by-step path to reach the comparison on a fresh install, since a new install starts empty
+and the comparison needs records on both sides of a phase boundary.
