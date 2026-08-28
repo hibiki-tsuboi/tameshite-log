@@ -15,10 +15,10 @@ struct PhaseSummaryCard: View {
                 header
                 Divider()
                 averages
-                if !summary.adherence.isEmpty {
-                    Divider()
-                    adherenceSection
-                }
+                // 比較を実施の記録より先に置く。フェーズ単体の平均は、
+                // 何と比べたかが分かって初めて読める数字で、この画面はそのためにある。
+                // 実施の記録は日数を数え上げた表示で、比較ボックスが同じ日数を
+                // 自分で書いているので、後ろに回しても読む順が壊れない。
                 if let comparison {
                     Divider()
                     comparisonSection(comparison)
@@ -26,6 +26,10 @@ struct PhaseSummaryCard: View {
                 if !adherenceComparisons.isEmpty {
                     Divider()
                     adherenceComparisonSection
+                }
+                if !summary.adherence.isEmpty {
+                    Divider()
+                    adherenceSection
                 }
             }
         }
