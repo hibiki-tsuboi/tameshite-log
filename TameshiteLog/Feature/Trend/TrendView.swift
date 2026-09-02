@@ -67,6 +67,10 @@ struct TrendView: View {
             targetRecords: targetRecords
         )
         let comparisons = ObservationAnalyzer.comparisons(for: summaries)
+        let reproducibilityChecks = ObservationAnalyzer.reproducibilityChecks(
+            for: plan,
+            summaries: summaries
+        )
         let adherenceComparisons = Dictionary(
             grouping: ObservationAnalyzer.adherenceComparisons(
                 for: plan,
@@ -83,6 +87,8 @@ struct TrendView: View {
                 VStack(spacing: 18) {
                     comparisonHero(plan: plan)
                     metricPicker
+
+                    ReproducibilityCard(checks: reproducibilityChecks, metric: metric)
 
                     SectionCard(title: "\(metric.title)の日ごとの動き", systemImage: "chart.xyaxis.line") {
                         if tallies.contains(where: { metric.value(in: $0) != nil }) {

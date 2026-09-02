@@ -31,7 +31,7 @@ struct TameshiteLogApp: App {
         }
 
         #if DEBUG
-        // `-sampleData` を付けて起動すると、30日分の架空データが入った状態で立ち上がる。
+        // `-sampleData` を付けて起動すると、画面確認用の架空データが入った状態で立ち上がる。
         // 画面の見え方を確認するための開発用の入口。
         if ProcessInfo.processInfo.arguments.contains("-sampleData") {
             SampleData.populate(container.mainContext)

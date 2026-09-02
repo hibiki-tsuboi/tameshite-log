@@ -228,6 +228,18 @@ struct MetricChange: Identifiable, Sendable {
 
     var isIncrease: Bool { delta > 0 }
 
+    /// 画面に出す小数第 1 位にそろえたあとの変化方向。
+    ///
+    /// 画面では 0.04 を「0」と表示するため、生の値だけで増減を決めると
+    /// 「差は 0 なのに増えた」といった食い違いが起きる。再現性チェックも
+    /// 利用者が読んでいる数値と同じ丸め方で方向を判定する。
+    var recordedDirection: RecordedChangeDirection {
+        let rounded = (delta * 10).rounded() / 10
+        if rounded > 0 { return .increase }
+        if rounded < 0 { return .decrease }
+        return .unchanged
+    }
+
     /// 事実だけを述べた一文。効いている／合っているといった判断は含めない。
     func sentence(referenceName: String) -> String {
         let rounded = (delta * 10).rounded() / 10
@@ -241,6 +253,13 @@ struct MetricChange: Identifiable, Sendable {
         }
         return "記録上、「\(referenceName)」と比べて\(metric.averageTitle)が\(amount) \(word)なっています。"
     }
+}
+
+/// 記録上の変化方向。良い／悪い、効いた／効かなかったという評価は持たない。
+enum RecordedChangeDirection: Hashable, Sendable {
+    case increase
+    case decrease
+    case unchanged
 }
 
 /// フェーズ同士の比較。
@@ -275,6 +294,69 @@ struct PhaseComparison: Identifiable, Sendable {
     func change(for metric: ObservationMetric) -> MetricChange? {
         changes.first { $0.metric == metric }
     }
+}
+
+/// 同じ観察対象を含む複数の「試している期間」を、各回の直前にある
+/// いつもの状態／お休み期間と見くらべた結果。
+///
+/// 永続化はしない。既存のフェーズと記録から都度計算するため、モデル移行は不要。
+struct ReproducibilityCheck: Identifiable, Sendable {
+    /// この組み合わせが最初に現れたフェーズ。1 フェーズは 1 組にしか属さないため ID に使える。
+    var firstPhaseID: PersistentIdentifier
+    var targetNames: [String]
+    /// 同じ観察対象の組み合わせを持つ期間の総数。比較できない期間も含む。
+    var phaseCount: Int
+    /// 直前の基準期間と比較できた各回。日数不足の比較も含む。
+    var rounds: [PhaseComparison]
+
+    var id: PersistentIdentifier { firstPhaseID }
+    var title: String { targetNames.joined(separator: " + ") }
+
+    /// 選択中の指標について、両側に最低日数がそろった比較だけを返す。
+    func comparableChanges(for metric: ObservationMetric) -> [MetricChange] {
+        rounds.compactMap { round in
+            guard round.meetsMinimum else { return nil }
+            return round.change(for: metric)
+        }
+    }
+
+    /// 2 回以上比較できたとき、最も多かった方向とその回数を返す。
+    /// 同数なら方向を 1 つに決めず nil にして、画面では「方向が分かれた」と表示する。
+    func result(for metric: ObservationMetric) -> ReproducibilityResult? {
+        let changes = comparableChanges(for: metric)
+        guard changes.count >= 2 else { return nil }
+
+        let counts = Dictionary(grouping: changes, by: \.recordedDirection)
+            .mapValues(\.count)
+        let ranked = counts.sorted { lhs, rhs in
+            if lhs.value == rhs.value {
+                return directionOrder(lhs.key) < directionOrder(rhs.key)
+            }
+            return lhs.value > rhs.value
+        }
+        let top = ranked[0]
+        let hasUniqueTop = ranked.dropFirst().first.map { top.value > $0.value } ?? true
+
+        return ReproducibilityResult(
+            comparableRounds: changes.count,
+            dominantDirection: hasUniqueTop ? top.key : nil,
+            matchingRounds: hasUniqueTop ? top.value : 0
+        )
+    }
+
+    private func directionOrder(_ direction: RecordedChangeDirection) -> Int {
+        switch direction {
+        case .decrease: 0
+        case .unchanged: 1
+        case .increase: 2
+        }
+    }
+}
+
+struct ReproducibilityResult: Sendable {
+    var comparableRounds: Int
+    var dominantDirection: RecordedChangeDirection?
+    var matchingRounds: Int
 }
 
 /// 同じフェーズの中で「実施した日」と「実施しなかった日」を見くらべたもの。

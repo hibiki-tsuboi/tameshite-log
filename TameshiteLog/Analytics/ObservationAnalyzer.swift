@@ -153,6 +153,73 @@ enum ObservationAnalyzer {
         return PhaseComparison(subject: subject, reference: reference, kind: kind, changes: changes)
     }
 
+    // MARK: - 再現性チェック
+
+    /// 同じ観察対象の組み合わせを含む「試している期間」が 2 回以上あるとき、
+    /// 各回をその直前にある「いつもの状態」または「お休み期間」と比較する。
+    ///
+    /// 対象名ではなく SwiftData の ID の集合でまとめる。対象名をあとから変えた場合や、
+    /// 複数対象の並び順が変わった場合にも、同じ条件を別物として数えないため。
+    /// 直前の基準期間に記録がない回は比較を作らず、画面側で不足として説明する。
+    static func reproducibilityChecks(
+        for plan: ObservationPlan,
+        summaries: [PhaseSummary]
+    ) -> [ReproducibilityCheck] {
+        struct TargetSignature: Hashable {
+            var ids: Set<PersistentIdentifier>
+        }
+
+        let phases = plan.orderedPhases
+        let summariesByID = Dictionary(
+            summaries.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        let occurrences: [(index: Int, phase: ObservationPhase, signature: TargetSignature)] = phases
+            .enumerated()
+            .compactMap { index, phase in
+                guard phase.type == .intervention, !phase.targets.isEmpty else { return nil }
+                return (
+                    index,
+                    phase,
+                    TargetSignature(ids: Set(phase.targets.map(\.persistentModelID)))
+                )
+            }
+        let grouped = Dictionary(grouping: occurrences, by: \.signature)
+
+        return grouped.values.compactMap { group -> (firstIndex: Int, check: ReproducibilityCheck)? in
+            let ordered = group.sorted { $0.index < $1.index }
+            guard ordered.count >= 2, let first = ordered.first else { return nil }
+
+            let rounds = ordered.compactMap { occurrence -> PhaseComparison? in
+                guard let subject = summariesByID[occurrence.phase.persistentModelID],
+                      subject.hasEnoughData else { return nil }
+
+                let reference = phases[..<occurrence.index]
+                    .reversed()
+                    .lazy
+                    .filter { $0.type == .baseline || $0.type == .washout }
+                    .compactMap { summariesByID[$0.persistentModelID] }
+                    .first(where: \.hasEnoughData)
+
+                guard let reference else { return nil }
+                return comparison(subject: subject, reference: reference, kind: .previous)
+            }
+
+            return (
+                first.index,
+                ReproducibilityCheck(
+                    firstPhaseID: first.phase.persistentModelID,
+                    targetNames: first.phase.orderedTargets.map(\.name),
+                    phaseCount: ordered.count,
+                    rounds: rounds
+                )
+            )
+        }
+        .sorted { $0.firstIndex < $1.firstIndex }
+        .map(\.check)
+    }
+
     // MARK: - 実施の有無による比較
 
     /// プランの全フェーズについて、実施した日と実施しなかった日の比較を集める。

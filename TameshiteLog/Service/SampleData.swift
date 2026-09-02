@@ -3,7 +3,7 @@ import Foundation
 import SwiftData
 import UIKit
 
-/// プレビューと動作確認のための架空データ（30 日分）。
+/// プレビューと動作確認のための架空データ。
 ///
 /// 数値は UI の見え方を確かめるために作ったもので、薬の効果を表すものではない。
 /// 実行ごとに変わると差分が読めないので、日付インデックスから決まる疑似乱数で生成する。
@@ -49,10 +49,16 @@ enum SampleData {
             skipEvery: 2,
             skippedProfile: DayProfile(count: 3...5, bristol: 5...6, pain: 1...2, urgency: 1...2)
         ),
-        // 記録が最低日数に届かないフェーズ。差の数値だけが出て一文が出ない側の確認用。
+        // 次の再試行の基準になる期間。再現性チェックで両側が最低日数を満たすようにする。
         PhaseSpec(
-            name: "休薬", type: .washout, days: 4, targetNames: [],
+            name: "いったんお休み", type: .washout, days: 8, targetNames: [],
             start: DayProfile(count: 4...5, bristol: 5...7, pain: 1...2, urgency: 1...2), end: nil
+        ),
+        // 同じ観察対象をもう一度試す期間。最初の「整腸剤単独」と同じ方向の差を作り、
+        // 再現性チェックが 2 回ぶん表示される状態にする。
+        PhaseSpec(
+            name: "整腸剤をもう一度", type: .intervention, days: 9, targetNames: ["整腸剤"],
+            start: DayProfile(count: 1...3, bristol: 3...5, pain: 0...1, urgency: 0...1), end: nil
         ),
         // 立ち上がりを外す設定の確認用。効き始めるまでの数日を集計から抜く。
         PhaseSpec(
