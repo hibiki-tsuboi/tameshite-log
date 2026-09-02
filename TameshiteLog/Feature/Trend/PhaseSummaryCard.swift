@@ -234,38 +234,93 @@ struct PhaseSummaryCard: View {
         referenceName: String,
         referenceSpread: MetricSpread?
     ) -> some View {
-        VStack(spacing: 6) {
-            valueRow(
-                name: subjectName,
-                value: metric.formatted(change.subject),
-                spread: subjectSpread,
-                emphasized: true
-            )
-            valueRow(
-                name: referenceName,
-                value: metric.formatted(change.reference),
-                spread: referenceSpread,
-                emphasized: false
-            )
+        VStack(spacing: 14) {
+            HStack(alignment: .center, spacing: 10) {
+                comparisonValue(
+                    name: subjectName,
+                    value: metric.formatted(change.subject),
+                    spread: subjectSpread,
+                    emphasized: true
+                )
 
-            HStack {
-                Text("差")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text(metric.formattedDelta(change.delta))
-                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                Spacer()
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(color)
+                    .padding(8)
+                    .background(color.opacity(0.12), in: .circle)
+                    .accessibilityHidden(true)
+
+                comparisonValue(
+                    name: referenceName,
+                    value: metric.formatted(change.reference),
+                    spread: referenceSpread,
+                    emphasized: false
+                )
+            }
+
+            Divider()
+
+            HStack(spacing: 8) {
+                resultPill(title: "差", value: metric.formattedDelta(change.delta))
                 if let ratio = change.ratio {
-                    Text("変化")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text(Formatting.signedPercent(ratio))
-                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    resultPill(title: "変化", value: Formatting.signedPercent(ratio))
                 }
             }
         }
-        .padding(12)
-        .background(Color(.tertiarySystemFill), in: .rect(cornerRadius: 12))
+        .padding(14)
+        .background(
+            LinearGradient(
+                colors: [color.opacity(0.13), ObservationTheme.raisedSurface],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: .rect(cornerRadius: 18)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(color.opacity(0.18), lineWidth: 1)
+        }
+    }
+
+    private func comparisonValue(
+        name: String,
+        value: String,
+        spread: MetricSpread?,
+        emphasized: Bool
+    ) -> some View {
+        VStack(spacing: 4) {
+            Text(name)
+                .font(.caption.weight(emphasized ? .semibold : .regular))
+                .foregroundStyle(emphasized ? .primary : .secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .frame(minHeight: 32, alignment: .bottom)
+            Text(value)
+                .font(.system(.title3, design: .rounded, weight: .bold))
+                .foregroundStyle(emphasized ? color : .primary)
+                .contentTransition(.numericText())
+            if let spread, !spread.isFlat {
+                Text("\(metric.formattedSpread(spread))の範囲")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func resultPill(title: String, value: String) -> some View {
+        HStack(spacing: 5) {
+            Text(title)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .fontWeight(.bold)
+        }
+        .font(.subheadline)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(ObservationTheme.surface.opacity(0.8), in: .capsule)
+        .accessibilityElement(children: .combine)
     }
 
     /// 差を文章にしてよい日数がそろっていれば一文を、足りなければ何が足りないかを出す。

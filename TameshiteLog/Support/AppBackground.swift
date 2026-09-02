@@ -1,22 +1,29 @@
 import SwiftUI
 
 extension View {
-    /// アプリ全体の背景。
-    ///
-    /// 画像は正方形。iPhone は縦のみだが iPad は縦横どちらにも置かれるので、画面比が
-    /// 0.46〜1.33 まで振れる。縦長の絵を敷くと破綻するため、正方形を
-    /// scaledToFill で覆い、あふれた分は切らせている。iPhone 縦では左右が
-    /// 各 23%、iPad 横では上下が各 25% 切れる前提の絵柄。
-    ///
-    /// List / Form に敷くときは、既定の背景が上に乗るので
-    /// `.scrollContentBackground(.hidden)` を合わせて指定する。
+    /// アプリ全体の背景。写真素材ではなく、フェーズ色とカードが読みやすい静かな面にする。
+    /// List / Form に敷くときは `.scrollContentBackground(.hidden)` を合わせる。
     func appBackground() -> some View {
         background {
-            Image(.appBackground)
-                .resizable()
-                .interpolation(.high)
-                .scaledToFill()
-                .ignoresSafeArea()
+            ZStack {
+                Color(.systemBackground)
+                LinearGradient(
+                    colors: [
+                        Color.accentColor.opacity(0.13),
+                        ObservationTheme.sand.opacity(0.12),
+                        Color.clear,
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                RadialGradient(
+                    colors: [ObservationTheme.mint.opacity(0.12), .clear],
+                    center: .bottomTrailing,
+                    startRadius: 20,
+                    endRadius: 420
+                )
+            }
+            .ignoresSafeArea()
         }
     }
 }

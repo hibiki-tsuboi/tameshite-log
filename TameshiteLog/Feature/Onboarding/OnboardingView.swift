@@ -9,24 +9,30 @@ struct OnboardingView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 32) {
+            VStack(spacing: 28) {
                 Spacer()
 
-                Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
-                    .font(.system(size: 68))
-                    .foregroundStyle(.tint)
-                    .accessibilityHidden(true)
+                OnboardingJourneyMark()
 
-                VStack(spacing: 20) {
-                    Text("変えてみたことと、\nからだの変化を記録。")
+                VStack(spacing: 16) {
+                    Text("試したことと、\nからだの変化を見くらべる。")
                         .font(.system(.title, design: .rounded, weight: .bold))
 
-                    Text("毎日の記録から\n前後の変化を振り返れます。")
+                    Text("期間を分けて記録するから、\nいつもの状態との違いが見えてきます。")
                         .font(.body)
                         .foregroundStyle(.secondary)
                 }
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
+
+                HStack(spacing: 0) {
+                    OnboardingStep(number: "1", title: "記録")
+                    connector
+                    OnboardingStep(number: "2", title: "区切る")
+                    connector
+                    OnboardingStep(number: "3", title: "比べる")
+                }
+                .padding(.horizontal, 34)
 
                 Spacer()
 
@@ -37,10 +43,8 @@ struct OnboardingView: View {
                         Text("観察をはじめる")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 6)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
+                    .buttonStyle(ObservationPrimaryButtonStyle())
 
                     // 引き継ぎファイルを持って新しい端末を開いた人が、ここ以外で復元にたどり着けない。
                     // タブは hasCompletedOnboarding が立ってからで、それにはプランを作るしかないので、
@@ -68,6 +72,59 @@ struct OnboardingView: View {
                 hasCompletedOnboarding = true
             }
         }
+    }
+
+    private var connector: some View {
+        Capsule()
+            .fill(Color.accentColor.opacity(0.25))
+            .frame(maxWidth: .infinity)
+            .frame(height: 3)
+            .offset(y: -10)
+            .accessibilityHidden(true)
+    }
+}
+
+private struct OnboardingJourneyMark: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 28)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.accentColor.opacity(0.22), ObservationTheme.mint.opacity(0.22)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 112, height: 112)
+
+            HStack(spacing: 7) {
+                Circle().fill(Color.gray.opacity(0.55)).frame(width: 13, height: 13)
+                Capsule().fill(Color.accentColor.opacity(0.45)).frame(width: 22, height: 5)
+                Circle().fill(Color.accentColor).frame(width: 21, height: 21)
+                Capsule().fill(Color.accentColor.opacity(0.45)).frame(width: 22, height: 5)
+                Circle().fill(ObservationTheme.mint).frame(width: 13, height: 13)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+private struct OnboardingStep: View {
+    var number: String
+    var title: String
+
+    var body: some View {
+        VStack(spacing: 7) {
+            Text(number)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 28, height: 28)
+                .background(ObservationTheme.ink, in: .circle)
+            Text(title)
+                .font(.caption.weight(.semibold))
+        }
+        .frame(width: 58)
+        .accessibilityElement(children: .combine)
     }
 }
 

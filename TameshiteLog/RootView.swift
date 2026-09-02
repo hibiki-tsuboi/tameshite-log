@@ -15,34 +15,43 @@ struct RootView: View {
 }
 
 enum MainTab: Hashable {
-    case today
-    case trend
-    case calendar
-    case settings
+    case record
+    case compare
+    case history
 }
 
 struct MainTabView: View {
-    @State private var selection: MainTab = .today
+    @State private var selection: MainTab
 
     @AppStorage(AppStorageKey.reminderEnabled) private var reminderEnabled = false
     @AppStorage(AppStorageKey.reminderHour) private var reminderHour = AppStorageKey.defaultReminderHour
     @AppStorage(AppStorageKey.reminderMinute) private var reminderMinute = AppStorageKey.defaultReminderMinute
 
+    init() {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        let initial: MainTab = arguments.contains("-compareTab")
+            ? .compare
+            : (arguments.contains("-historyTab") ? .history : .record)
+        _selection = State(initialValue: initial)
+        #else
+        _selection = State(initialValue: .record)
+        #endif
+    }
+
     var body: some View {
         TabView(selection: $selection) {
-            Tab("今日", systemImage: "checklist", value: MainTab.today) {
+            Tab("記録", systemImage: "square.and.pencil", value: MainTab.record) {
                 TodayView()
             }
-            Tab("経過", systemImage: "chart.xyaxis.line", value: MainTab.trend) {
+            Tab("比較", systemImage: "arrow.left.arrow.right", value: MainTab.compare) {
                 TrendView()
             }
-            Tab("カレンダー", systemImage: "calendar", value: MainTab.calendar) {
+            Tab("履歴", systemImage: "calendar", value: MainTab.history) {
                 MonthCalendarView()
             }
-            Tab("設定", systemImage: "gearshape", value: MainTab.settings) {
-                SettingsView()
-            }
         }
+        .tint(ObservationTheme.ink)
         .task {
             // 通知の許可はあとから取り消せるし、時刻の設定も端末側で変わりうる。
             // 起動のたびに設定どおりに登録し直しておく。

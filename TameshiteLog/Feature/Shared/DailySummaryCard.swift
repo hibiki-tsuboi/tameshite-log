@@ -31,7 +31,7 @@ struct DailySummaryCard: View {
                 TextField("気づいたこと（任意）", text: $note, axis: .vertical)
                     .lineLimit(1...5)
                     .padding(10)
-                    .background(Color(.tertiarySystemFill), in: .rect(cornerRadius: 12))
+                    .background(ObservationTheme.raisedSurface, in: .rect(cornerRadius: 12))
             }
 
             // このカードには保存ボタンがない。排便の記録だけがシートと「保存」で、

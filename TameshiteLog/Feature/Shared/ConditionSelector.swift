@@ -27,7 +27,7 @@ struct ConditionSelector: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(
-                            isSelected ? level.tint.opacity(0.18) : Color(.tertiarySystemFill),
+                            isSelected ? level.tint.opacity(0.18) : ObservationTheme.raisedSurface,
                             in: .rect(cornerRadius: 12)
                         )
                         .overlay {
@@ -56,11 +56,45 @@ struct SymptomSelector: View {
     @Binding var selection: SymptomLevel
 
     var body: some View {
-        Picker(title, selection: $selection) {
-            ForEach(SymptomLevel.allCases) { level in
-                Text(level.label).tag(level)
+        VStack(alignment: .leading, spacing: 9) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 6) {
+                ForEach(SymptomLevel.allCases) { level in
+                    let isSelected = selection == level
+                    Button {
+                        selection = level
+                    } label: {
+                        VStack(spacing: 6) {
+                            Circle()
+                                .fill(isSelected ? level.tint : level.tint.opacity(0.16))
+                                .frame(width: 12, height: 12)
+                            Text(level.label)
+                                .font(.caption.weight(isSelected ? .semibold : .regular))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .foregroundStyle(isSelected ? .primary : .secondary)
+                        .background(
+                            isSelected ? level.tint.opacity(0.13) : ObservationTheme.raisedSurface,
+                            in: .rect(cornerRadius: 12)
+                        )
+                        .overlay {
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(level.tint.opacity(0.75), lineWidth: 1.5)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(title) \(level.label)")
+                    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                }
             }
         }
-        .pickerStyle(.segmented)
     }
 }

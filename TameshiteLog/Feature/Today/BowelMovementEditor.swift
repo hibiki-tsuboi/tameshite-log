@@ -43,62 +43,50 @@ struct BowelMovementEditor: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    ForEach(BristolScale.allCases) { scale in
-                        Button {
-                            bristolScale = scale
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: scale.symbolName)
-                                    .font(.title2)
-                                    .foregroundStyle(scale.tint)
-                                Text(scale.label)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                if bristolScale == scale {
-                                    Image(systemName: "checkmark")
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(Color.accentColor)
-                                }
-                            }
-                            .contentShape(.rect)
+            ScrollView {
+                VStack(spacing: 16) {
+                    ObservationHeroPanel(tint: bristolScale?.tint ?? .accentColor) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("便の状態")
+                                .font(.headline)
+                            BristolScaleRail(selection: $bristolScale)
                         }
-                        .accessibilityLabel("ブリストル\(scale.rawValue) \(scale.label)")
-                        .accessibilityAddTraits(bristolScale == scale ? [.isSelected] : [])
                     }
-                } header: {
-                    Text("便の状態")
-                } footer: {
-                    Text("ブリストル便形状スケール（1: 硬い 〜 7: 水様）です。")
-                }
 
-                Section("時刻") {
-                    DatePicker("記録した時刻", selection: $recordedAt, displayedComponents: .hourAndMinute)
-                }
+                    SectionCard(title: "記録した時刻", systemImage: "clock") {
+                        DatePicker("時刻", selection: $recordedAt, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
-                Section("腹痛") {
-                    SymptomSelector(title: "腹痛", selection: $abdominalPain)
-                }
+                    SectionCard(title: "からだの反応", systemImage: "waveform.path.ecg") {
+                        SymptomSelector(title: "腹痛", selection: $abdominalPain)
+                        Divider()
+                        SymptomSelector(title: "急な便意", selection: $urgency)
+                    }
 
-                Section("急な便意") {
-                    SymptomSelector(title: "急な便意", selection: $urgency)
-                }
+                    SectionCard(title: "メモ", systemImage: "text.alignleft") {
+                        TextField("気づいたこと（任意）", text: $note, axis: .vertical)
+                            .lineLimit(2...5)
+                            .padding(12)
+                            .background(ObservationTheme.raisedSurface, in: .rect(cornerRadius: 14))
+                    }
 
-                Section("メモ") {
-                    TextField("任意", text: $note, axis: .vertical)
-                        .lineLimit(1...4)
-                }
-
-                if isEditing {
-                    Section {
+                    if isEditing {
                         Button("この記録を削除", systemImage: "trash", role: .destructive) {
                             deleteMovement()
                         }
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(14)
+                        .background(Color.red.opacity(0.09), in: .rect(cornerRadius: 16))
                     }
                 }
+                .padding(.horizontal)
+                .padding(.bottom, 32)
+                .readableWidth()
+                .dismissesKeyboardOnBackgroundTap()
             }
-            .scrollContentBackground(.hidden)
             .appBackground()
             // 既定はスクロールで即閉じる。指の動きに追従させて、他の画面と揃える。
             .scrollDismissesKeyboard(.interactively)
@@ -142,6 +130,65 @@ struct BowelMovementEditor: View {
         guard let movement else { return }
         ObservationStore(context: context).delete(movement)
         dismiss()
+    }
+}
+
+/// 7 行のフォームではなく、硬い側から水様までを一続きの尺度として選ぶ。
+private struct BristolScaleRail: View {
+    @Binding var selection: BristolScale?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 5) {
+                ForEach(BristolScale.allCases) { scale in
+                    let isSelected = selection == scale
+                    Button {
+                        withAnimation(.snappy) { selection = scale }
+                    } label: {
+                        Text("\(scale.rawValue)")
+                            .font(.system(.body, design: .rounded, weight: .bold))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 42)
+                            .foregroundStyle(isSelected ? Color.white : scale.tint)
+                            .background(
+                                isSelected ? scale.tint : scale.tint.opacity(0.13),
+                                in: .circle
+                            )
+                            .overlay {
+                                if isSelected {
+                                    Circle().strokeBorder(Color.white.opacity(0.65), lineWidth: 2)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("ブリストル\(scale.rawValue) \(scale.label)")
+                    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                }
+            }
+
+            HStack {
+                Text("硬い")
+                Spacer()
+                Text("水様")
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+
+            HStack(spacing: 9) {
+                Image(systemName: selection?.symbolName ?? "circle.dashed")
+                    .font(.title3)
+                    .foregroundStyle(selection?.tint ?? Color.secondary)
+                Text(selection?.label ?? "1〜7から選んでください")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(ObservationTheme.raisedSurface.opacity(0.82), in: .rect(cornerRadius: 14))
+
+            Text("ブリストル便形状スケール（1: 硬い 〜 7: 水様）です。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 

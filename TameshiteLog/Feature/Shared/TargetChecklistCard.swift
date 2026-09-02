@@ -79,6 +79,14 @@ struct TargetChecklistCard: View {
             }
         }
 
+        var shortLabel: String {
+            switch self {
+            case .untracked: "未記録"
+            case .completed: "実施"
+            case .skipped: "未実施"
+            }
+        }
+
         /// 次にタップしたらどうなるかを読み上げる。
         var accessibilityAction: String {
             switch self {
@@ -97,17 +105,22 @@ struct TargetChecklistCard: View {
             store.toggleTarget(target, on: day)
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: mark.symbolName)
-                    .font(.title2)
-                    .foregroundStyle(mark.tint)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(target.name)
+                        .font(.body.weight(.medium))
                         .foregroundStyle(.primary)
                     Text(mark.caption)
                         .font(.caption)
-                        .foregroundStyle(mark.tint)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
                 }
                 Spacer(minLength: 8)
+                Label(mark.shortLabel, systemImage: mark.symbolName)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(mark.tint)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(mark.tint.opacity(0.12), in: .capsule)
             }
             .contentShape(.rect)
         }
@@ -127,7 +140,7 @@ struct TargetChecklistCard: View {
         let cycle = "タップで「実施した」→「実施しなかった」→「未記録」と切り替わります。"
         let unit = "1 日に何回かあるものは、全部できた日を「実施した」にします。"
         guard !hasSkippedRow else { return cycle + unit }
-        return cycle + unit + "実施した日と実施しなかった日は、経過画面で見くらべられます。"
+        return cycle + unit + "実施した日と実施しなかった日は、比較画面で見くらべられます。"
     }
 
     private var hasSkippedRow: Bool {

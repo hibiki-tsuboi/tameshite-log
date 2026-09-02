@@ -12,15 +12,18 @@ struct TodayView: View {
 
     var body: some View {
         NavigationStack {
-            if let plan = activePlans.first {
-                TodayPlanView(plan: plan, day: today)
-                    // 日付が変わったら作り直す。カードが持っている入力途中の状態が
-                    // 新しい日に引き継がれず、前日ぶんの後片付けも走る。
-                    .id(today)
-            } else {
-                NoActivePlanView()
-                    .navigationTitle("今日")
+            Group {
+                if let plan = activePlans.first {
+                    TodayPlanView(plan: plan, day: today)
+                        // 日付が変わったら作り直す。カードが持っている入力途中の状態が
+                        // 新しい日に引き継がれず、前日ぶんの後片付けも走る。
+                        .id(today)
+                } else {
+                    NoActivePlanView()
+                        .navigationTitle("記録")
+                }
             }
+            .mainSettingsAccess()
         }
         .tracksCurrentDay($today)
     }
@@ -52,6 +55,9 @@ private struct TodayPlanView: View {
             filter: #Predicate<BowelMovement> { $0.date >= start && $0.date < end },
             sort: [SortDescriptor(\BowelMovement.recordedAt)]
         )
+        #if DEBUG
+        _isRecording = State(initialValue: ProcessInfo.processInfo.arguments.contains("-recordEditor"))
+        #endif
     }
 
     private var store: ObservationStore { ObservationStore(context: context) }
@@ -60,7 +66,7 @@ private struct TodayPlanView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: 18) {
                 header
                 TargetChecklistCard(title: "今日の観察対象", day: day, targets: currentPhase?.orderedTargets ?? [])
                 countCard
@@ -80,7 +86,7 @@ private struct TodayPlanView: View {
         // 指で下ろしても閉じる。こちらが iOS の標準ジェスチャで、余白タップは補いになる。
         .scrollDismissesKeyboard(.interactively)
         .appBackground()
-        .navigationTitle("今日")
+        .navigationTitle("記録")
         .safeAreaInset(edge: .bottom) { recordButton }
         .sheet(isPresented: $isRecording) {
             BowelMovementEditor(day: day)
@@ -96,15 +102,21 @@ private struct TodayPlanView: View {
     // MARK: - 各パーツ
 
     private var header: some View {
-        SectionCard {
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(Formatting.weekdayDate(day))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+        ObservationHeroPanel(tint: currentPhase.map(phaseColor) ?? .accentColor) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(Formatting.weekdayDate(day))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
 
-                    Text(plan.name)
-                        .font(.headline)
+                        Text(plan.name)
+                            .font(.headline)
+                    }
+                    Spacer(minLength: 8)
+                    if let phase = currentPhase {
+                        PhaseBadge(type: phase.type, color: phaseColor(phase), phaseName: phase.name)
+                    }
                 }
                 .accessibilityElement(children: .combine)
 
@@ -114,7 +126,9 @@ private struct TodayPlanView: View {
                     noPhaseNotice
                 }
 
-                Divider()
+                PhaseJourneyStrip(plan: plan, currentPhase: currentPhase)
+
+                Divider().opacity(0.7)
                 startPhaseButton
             }
         }
@@ -126,29 +140,35 @@ private struct TodayPlanView: View {
         NavigationLink {
             PhaseEditorView(phase: phase)
         } label: {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(phase.name)
-                            .font(.system(.title2, design: .rounded, weight: .bold))
-                        Spacer(minLength: 8)
-                        PhaseBadge(type: phase.type, color: phaseColor(phase), phaseName: phase.name)
-                    }
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(phase.name)
+                        .font(.system(.title2, design: .rounded, weight: .bold))
 
-                    Text("\(Calendar.current.elapsedDayNumber(from: phase.startDate, to: day))日目 ・ \(Formatting.dateRange(from: phase.startDate, to: phase.endDate))")
-                        .font(.subheadline)
+                    Text(Formatting.dateRange(from: phase.startDate, to: phase.endDate))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
 
                     if !phase.targets.isEmpty {
                         Text(phase.targetSummary)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+                            .lineLimit(2)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
+                VStack(spacing: 0) {
+                    Text("\(Calendar.current.elapsedDayNumber(from: phase.startDate, to: day))")
+                        .font(.system(size: 38, weight: .bold, design: .rounded))
+                        .foregroundStyle(phaseColor(phase))
+                    Text("日目")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+
                 Image(systemName: "chevron.forward")
-                    .font(.footnote.weight(.semibold))
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(.tertiary)
             }
             .contentShape(.rect)
@@ -177,8 +197,20 @@ private struct TodayPlanView: View {
     /// 「終えてから始める」と「そのまま次を始める」を選ばせる必要はない。
     private var startPhaseButton: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Button("フェーズを始める", systemImage: "plus") { isStartingPhase = true }
-                .font(.subheadline)
+            Button {
+                isStartingPhase = true
+            } label: {
+                HStack {
+                    Label("次のフェーズを始める", systemImage: "plus")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Image(systemName: "arrow.right")
+                        .font(.caption.weight(.bold))
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.accentColor)
                 .disabled(startBlockedReason != nil)
 
             if let startBlockedReason {
@@ -203,7 +235,7 @@ private struct TodayPlanView: View {
     }
 
     private var countCard: some View {
-        SectionCard(title: "今日の排便", systemImage: "chart.bar") {
+        SectionCard(title: "今日のスナップショット", systemImage: "waveform.path.ecg") {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\(movements.count)")
                     .font(.system(size: 52, weight: .bold, design: .rounded))
@@ -236,12 +268,10 @@ private struct TodayPlanView: View {
             Label("排便を記録", systemImage: "plus")
                 .font(.headline)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
         }
-        .buttonStyle(.glassProminent)
-        .controlSize(.large)
+        .buttonStyle(ObservationPrimaryButtonStyle())
         .padding(.horizontal)
-        .padding(.bottom, 8)
+        .padding(.vertical, 8)
         .readableWidth()
         .accessibilityHint("便の状態を選んで保存します")
     }
@@ -268,7 +298,7 @@ struct NoActivePlanView: View {
             Text("何かを試す前後の変化を振り返るには、まず観察プランを作ります。")
         } actions: {
             Button("観察をはじめる") { isCreatingPlan = true }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(ObservationPrimaryButtonStyle())
         }
         .appBackground()
         .sheet(isPresented: $isCreatingPlan) {

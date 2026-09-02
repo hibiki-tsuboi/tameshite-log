@@ -8,16 +8,20 @@ struct SectionCard<Content: View, Accessory: View>: View {
     @ViewBuilder var accessory: Accessory
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             if let title {
                 HStack(alignment: .firstTextBaseline) {
-                    Label {
+                    HStack(spacing: 9) {
+                        if let systemImage {
+                            Image(systemName: systemImage)
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Color.accentColor)
+                                .frame(width: 26, height: 26)
+                                .background(Color.accentColor.opacity(0.12), in: .circle)
+                        }
                         Text(title)
-                    } icon: {
-                        if let systemImage { Image(systemName: systemImage) }
+                            .font(.subheadline.weight(.semibold))
                     }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
 
                     Spacer(minLength: 8)
                     accessory
@@ -26,8 +30,12 @@ struct SectionCard<Content: View, Accessory: View>: View {
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 20))
+        .padding(18)
+        .background(ObservationTheme.surface.opacity(0.94), in: .rect(cornerRadius: 22))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22)
+                .strokeBorder(ObservationTheme.hairline, lineWidth: 1)
+        }
     }
 }
 

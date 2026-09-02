@@ -21,10 +21,8 @@ struct MonthCalendarView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
-                    monthHeader
-                    weekdayHeader
-                    grid
+                VStack(spacing: 18) {
+                    calendarPanel
                     legend
                 }
                 .padding(.horizontal)
@@ -32,7 +30,8 @@ struct MonthCalendarView: View {
                 .readableWidth()
             }
             .appBackground()
-            .navigationTitle("カレンダー")
+            .navigationTitle("履歴")
+            .mainSettingsAccess()
             .navigationDestination(for: Date.self) { day in
                 DayDetailView(day: day)
             }
@@ -50,6 +49,17 @@ struct MonthCalendarView: View {
     }
 
     // MARK: - パーツ
+
+    private var calendarPanel: some View {
+        ObservationHeroPanel(tint: .accentColor) {
+            VStack(spacing: 14) {
+                monthHeader
+                Divider().opacity(0.65)
+                weekdayHeader
+                grid
+            }
+        }
+    }
 
     private var monthHeader: some View {
         HStack {
@@ -218,7 +228,7 @@ private struct DayCell: View {
         // 2 桁の日付が枠に収まらず「1」しか見えなくなる。11 日と 15 日の区別が
         // つかないマスは日付として読めないので、ここだけ拡大の上限を決める。
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 10))
+        .background(isToday ? Color.accentColor.opacity(0.09) : .clear, in: .rect(cornerRadius: 10))
         .opacity(isInDisplayedMonth ? (isFuture ? 0.5 : 1) : 0.4)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)

@@ -79,7 +79,7 @@ struct PlanSetupView: View {
                 .textFieldStyle(.plain)
                 .font(.title3)
                 .padding()
-                .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
+                .background(ObservationTheme.surface, in: .rect(cornerRadius: 14))
 
             Text("あとから変えられます。")
                 .font(.footnote)
@@ -115,7 +115,7 @@ struct PlanSetupView: View {
                 .textFieldStyle(.plain)
                 .font(.title3)
                 .padding()
-                .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
+                .background(ObservationTheme.surface, in: .rect(cornerRadius: 14))
 
             Picker("種類", selection: $trialType) {
                 ForEach(TargetType.allCases) { type in
@@ -150,8 +150,7 @@ struct PlanSetupView: View {
                 Text(isLastStep ? "はじめる" : "次へ")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(ObservationPrimaryButtonStyle())
             .disabled(isNextDisabled)
         }
         .padding()
@@ -262,7 +261,7 @@ private struct ChoiceRow: View {
                 Spacer(minLength: 0)
             }
             .padding()
-            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
+            .background(ObservationTheme.surface, in: .rect(cornerRadius: 14))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])

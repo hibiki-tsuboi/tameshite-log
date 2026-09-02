@@ -57,12 +57,10 @@ struct DayDetailView: View {
                 Label("排便を記録", systemImage: "plus")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
             }
-            .buttonStyle(.glassProminent)
-            .controlSize(.large)
+            .buttonStyle(ObservationPrimaryButtonStyle())
             .padding(.horizontal)
-            .padding(.bottom, 8)
+            .padding(.vertical, 8)
             .readableWidth()
         }
         .sheet(isPresented: $isRecording) {
@@ -74,7 +72,7 @@ struct DayDetailView: View {
     }
 
     private var header: some View {
-        SectionCard {
+        ObservationHeroPanel(tint: phase.map(phaseColor) ?? .accentColor) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("排便 \(movements.count)回")

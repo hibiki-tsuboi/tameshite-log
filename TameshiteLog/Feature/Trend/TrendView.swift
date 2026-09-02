@@ -32,7 +32,8 @@ struct TrendView: View {
                 }
             }
             .appBackground()
-            .navigationTitle("経過")
+            .navigationTitle("比較")
+            .mainSettingsAccess()
             .toolbar {
                 if plan != nil {
                     ToolbarItem(placement: .primaryAction) {
@@ -77,51 +78,114 @@ struct TrendView: View {
         )
         let colors = colorMap(for: plan, summaries: summaries)
 
-        return ScrollView {
-            VStack(spacing: 16) {
-                Picker("指標", selection: $metric) {
-                    ForEach(ObservationMetric.allCases) { metric in
-                        Text(metric.shortTitle).tag(metric)
-                    }
-                }
-                .pickerStyle(.segmented)
+        return ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 18) {
+                    comparisonHero(plan: plan)
+                    metricPicker
 
-                SectionCard(title: metric.title, systemImage: "chart.xyaxis.line") {
-                    if tallies.contains(where: { metric.value(in: $0) != nil }) {
-                        PhaseTimelineChart(
-                            tallies: tallies,
-                            summaries: summaries,
+                    SectionCard(title: "\(metric.title)の日ごとの動き", systemImage: "chart.xyaxis.line") {
+                        if tallies.contains(where: { metric.value(in: $0) != nil }) {
+                            PhaseTimelineChart(
+                                tallies: tallies,
+                                summaries: summaries,
+                                metric: metric,
+                                color: { colors[$0.id] ?? .accentColor }
+                            )
+                            Text(chartNote(summaries: summaries))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            Text("この指標の記録がまだありません。")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, minHeight: 120)
+                        }
+                    }
+
+                    ForEach(summaries) { summary in
+                        PhaseSummaryCard(
+                            summary: summary,
+                            comparison: comparisons.first { $0.subject.id == summary.id },
+                            adherenceComparisons: adherenceComparisons[summary.id] ?? [],
                             metric: metric,
-                            color: { colors[$0.id] ?? .accentColor }
+                            color: colors[summary.id] ?? .accentColor
                         )
-                        Text(chartNote(summaries: summaries))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else {
-                        Text("この指標の記録がまだありません。")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, minHeight: 120)
+                        .id(summary.id)
                     }
-                }
 
-                ForEach(summaries) { summary in
-                    PhaseSummaryCard(
-                        summary: summary,
-                        comparison: comparisons.first { $0.subject.id == summary.id },
-                        adherenceComparisons: adherenceComparisons[summary.id] ?? [],
-                        metric: metric,
-                        color: colors[summary.id] ?? .accentColor
-                    )
+                    disclaimer
                 }
-
-                disclaimer
+                .padding(.horizontal)
+                .padding(.bottom, 24)
+                .readableWidth()
             }
-            .padding(.horizontal)
-            .padding(.bottom, 24)
-            .readableWidth()
+            #if DEBUG
+            .task {
+                if ProcessInfo.processInfo.arguments.contains("-comparisonDetails"),
+                   let target = summaries.last?.id {
+                    await Task.yield()
+                    proxy.scrollTo(target, anchor: .top)
+                }
+            }
+            #endif
         }
+    }
+
+    private func comparisonHero(plan: ObservationPlan) -> some View {
+        let currentPhase = plan.phase(on: .now)
+        let currentIndex = currentPhase.flatMap { phase in
+            plan.orderedPhases.firstIndex { $0.persistentModelID == phase.persistentModelID }
+        } ?? 0
+        let tint = currentPhase.map { PhasePalette.color(type: $0.type, index: currentIndex) } ?? .accentColor
+
+        return ObservationHeroPanel(tint: tint) {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("期間を見くらべる")
+                        .font(.system(.title2, design: .rounded, weight: .bold))
+                    Text("同じ記録を、いつもの状態・試している期間・実施の有無で並べます。")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                PhaseJourneyStrip(plan: plan, currentPhase: currentPhase)
+            }
+        }
+    }
+
+    private var metricPicker: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                ForEach(ObservationMetric.allCases) { item in
+                    let isSelected = metric == item
+                    Button {
+                        withAnimation(.snappy) { metric = item }
+                    } label: {
+                        Text(item.shortTitle)
+                            .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                            .padding(.horizontal, 15)
+                            .padding(.vertical, 10)
+                            .foregroundStyle(isSelected ? Color.white : Color.primary)
+                            .background(
+                                isSelected ? ObservationTheme.ink : ObservationTheme.surface,
+                                in: .capsule
+                            )
+                            .overlay {
+                                if !isSelected {
+                                    Capsule().strokeBorder(ObservationTheme.hairline, lineWidth: 1)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                }
+            }
+            .padding(.horizontal, 1)
+        }
+        .scrollIndicators(.hidden)
     }
 
     /// 立ち上がりを外しているフェーズがあるときだけ、点と平均のずれについて足す。
