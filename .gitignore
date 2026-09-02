@@ -9,6 +9,9 @@ DerivedData/
 *.xccheckout
 xcuserdata/
 
+# JetBrains IDEs
+.idea/
+
 # Swift Package Manager
 .build/
 .swiftpm/
