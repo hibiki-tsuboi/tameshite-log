@@ -18,6 +18,14 @@ struct TrendView: View {
 
     private var plan: ObservationPlan? { activePlans.first }
 
+    init() {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        _metric = State(initialValue: arguments.contains("-bristolMetric") ? .bristol : .bowelCount)
+        _isExporting = State(initialValue: arguments.contains("-showExport"))
+        #endif
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -129,8 +137,21 @@ struct TrendView: View {
             }
             #if DEBUG
             .task {
-                if ProcessInfo.processInfo.arguments.contains("-comparisonDetails"),
-                   let target = summaries.last?.id {
+                let arguments = ProcessInfo.processInfo.arguments
+                let target: PersistentIdentifier?
+                if arguments.contains("-adherenceDetails") {
+                    target = summaries.first {
+                        !(adherenceComparisons[$0.id] ?? []).isEmpty
+                    }?.id
+                } else if arguments.contains("-comparisonDetails") {
+                    target = summaries.reversed().first { summary in
+                        comparisons.first { $0.subject.id == summary.id }?.meetsMinimum == true
+                    }?.id
+                } else {
+                    target = nil
+                }
+
+                if let target {
                     await Task.yield()
                     proxy.scrollTo(target, anchor: .top)
                 }

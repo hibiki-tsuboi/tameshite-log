@@ -14,6 +14,12 @@ phase the app also separates days the user marked "did it" from days marked "did
 and reports those two groups separately. Records are three-state - not logged / did it / did
 not do it - so a day that was never logged is never counted as a day the user skipped.
 
+We have also added a reproducibility check for repeated observation targets. When the same
+target is tried in two or more completed phases, the app compares each occurrence with the
+baseline or break immediately before it and shows whether the recorded change moved in the
+same direction each time. Every comparison is displayed separately and requires at least
+seven recorded days on both sides. The app does not claim effectiveness or causality.
+
 Before writing this we surveyed the Japanese App Store (iTunes Search API; 1,035 apps
 retrieved; 225 have bowel or gut logging as their subject, after removing games, toilet
 finders and unrelated results). Of those 225, the number comparing "days
@@ -31,8 +37,9 @@ shared. Each is built on different frameworks for a different purpose. Source or
 history is available on request.
 
 WHAT WE ARE CHANGING
-We are resubmitting with the screenshot set replaced so the comparison is the first thing
-shown, a rewritten keyword field, and the analysis screen reordered so the comparison sits
-directly beneath each phase's averages. The App Review Notes carry the same detail plus a
-step-by-step path to reach the comparison on a fresh install, since a new install starts empty
-and the comparison needs records on both sides of a phase boundary.
+We are resubmitting with a fully redesigned interface and screenshot set. The first screenshot
+now shows the reproducibility check, followed by phase comparison, done-vs-not-done comparison,
+recording, history and export. The main navigation is now Record / Compare / History instead of
+generic category-style tab icons. The App Review Notes carry the same detail plus a step-by-step
+path to reach these comparisons on a fresh install, since a new install starts empty and the
+comparisons need records on both sides of phase boundaries.

@@ -22,6 +22,13 @@ struct BowelMovementEditor: View {
         self.day = day
         self.movement = movement
 
+        #if DEBUG
+        let usesScreenshotValues = movement == nil
+            && ProcessInfo.processInfo.arguments.contains("-recordSample")
+        #else
+        let usesScreenshotValues = false
+        #endif
+
         let calendar = Calendar.current
         let initialTime: Date
         if let movement {
@@ -32,10 +39,10 @@ struct BowelMovementEditor: View {
             initialTime = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: day) ?? day
         }
 
-        _bristolScale = State(initialValue: movement?.bristolScale)
+        _bristolScale = State(initialValue: movement?.bristolScale ?? (usesScreenshotValues ? .slightlySoft : nil))
         _recordedAt = State(initialValue: initialTime)
-        _abdominalPain = State(initialValue: movement?.abdominalPain ?? .absent)
-        _urgency = State(initialValue: movement?.urgency ?? .absent)
+        _abdominalPain = State(initialValue: movement?.abdominalPain ?? (usesScreenshotValues ? .mild : .absent))
+        _urgency = State(initialValue: movement?.urgency ?? (usesScreenshotValues ? .moderate : .absent))
         _note = State(initialValue: movement?.note ?? "")
     }
 

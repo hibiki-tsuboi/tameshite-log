@@ -18,6 +18,16 @@ struct MonthCalendarView: View {
     private let calendar = Calendar.current
     private var plan: ObservationPlan? { activePlans.first }
 
+    init() {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-historyPreviousMonth") {
+            let calendar = Calendar.current
+            let currentMonth = calendar.startOfMonth(for: .now)
+            _month = State(initialValue: calendar.date(byAdding: .month, value: -1, to: currentMonth) ?? currentMonth)
+        }
+        #endif
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {

@@ -1,10 +1,12 @@
 PREVIOUS SUBMISSION (4.3(a))
-Our previous screenshots did not show what this app is for: the first two showed a daily log screen and a Bristol scale picker, both common to this category, and the comparison view - the actual product - was absent. Screenshots replaced, keyword field rewritten, analysis screen reordered so the comparison sits directly under each phase's averages.
+Our previous screenshots did not show what this app is for: the first two showed a daily log screen and a Bristol scale picker, both common to this category, and the comparison view - the actual product - was absent. The screenshots and interface have been replaced. The new first screenshot shows the reproducibility check, followed by phase comparison, done-vs-not-done comparison, recording, history and export.
 
 WHAT THIS APP DOES THAT LOGGING APPS DO NOT
 The user logs bowel movements (Bristol Stool Form Scale 1-7), pain, urgency and a daily summary, and registers the thing they are trying - medication, supplement, food change, exercise or habit.
 
 The timeline is then divided into phases with explicit start and end dates (baseline / trying it / break). The app reports each phase's averages against the baseline's, with the min-max range beside every average and the number of recorded days behind it. Within one phase it also separates days marked "did it" from days marked "did not do it" and reports those two groups separately. Records are three-state (not logged / did it / did not do it), so a day that was never logged is never counted as a day the user skipped.
+
+When the same observation target is tried in two or more completed phases, the reproducibility check compares each occurrence with the baseline or break phase immediately before it. It reports whether the recorded change moved in the same direction each time and shows every difference separately. Each comparison requires 7+ recorded days on both sides. It does not infer effectiveness, causality or medical significance.
 
 We surveyed the Japanese App Store first (iTunes Search API; 1,035 retrieved, 225 with bowel or gut logging as their subject after removing games, toilet finders and unrelated results). Of those 225, apps comparing "days it was done" against "days it was not": 0. Two describe a before/after comparison - one around a marker (a point in time), one against the preceding rolling period - and neither compares periods the user defines with a start and an end date. Raw data available.
 
@@ -24,14 +26,16 @@ A new install starts empty and the comparison needs ~2 weeks of records, so the 
 
 TO REACH THE COMPARISON ON A FRESH INSTALL
 1. First screen: tap the primary button, create a plan.
-2. Calendar tab: tap any past date to open that day's editors; backfill about a week. Future dates are intentionally not tappable.
-3. Today tab: start a second phase from the top card, then backfill several more days.
-4. Trend tab: scroll to the second phase card. Both comparisons appear there.
+2. History tab: tap any past date to open that day's editors; backfill about a week. Future dates are intentionally not tappable.
+3. Record tab: start a second phase from the top card, then backfill several more days.
+4. Compare tab: scroll to the second phase card. Both comparisons appear there.
+5. To show the reproducibility check, repeat the same observation target in another completed phase after a baseline or break and record 7+ days on both sides of each comparison.
 
 SCREEN NAMES (Japanese-only UI)
-今日 = Today / 経過 = Trend / カレンダー = Calendar / 設定 = Settings
+記録 = Record / 比較 = Compare / 履歴 = History / 「…」menu > 設定 = Settings
 いつもの状態 = baseline / フェーズ = phase
 いつもの状態と比較 = compared with the baseline
 実施した日と実施しなかった日 = days done vs days not done
+再現性チェック = reproducibility check
 
 No IAP, ads, user-generated content or login. iPhone portrait-only; iPad supported.
