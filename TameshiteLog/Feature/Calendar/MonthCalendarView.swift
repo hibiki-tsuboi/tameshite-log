@@ -117,6 +117,7 @@ struct MonthCalendarView: View {
                     .frame(width: 44, height: 44)
             }
             .accessibilityLabel("次の月")
+            .disabled(!canShowNextMonth)
         }
     }
 
@@ -192,8 +193,18 @@ struct MonthCalendarView: View {
 
     // MARK: -
 
+    /// 表示できる一番先の月。未来の日は記録できず、カレンダーのマスも
+    /// `NavigationLink` にならないので、先へ送れても開くものがない空の月が続くだけになる。
+    /// 「今日より先はない」という扱いを、月の送りでも同じにする。
+    private var currentMonth: Date { calendar.startOfMonth(for: today) }
+
+    private var canShowNextMonth: Bool { month < currentMonth }
+
+    /// 上限はここで締める。チェブロンは `canShowNextMonth` で無効になるが、
+    /// スワイプには押せない状態がないので、止めるのは入口側ではなくこちら。
     private func shiftMonth(by value: Int) {
-        month = calendar.date(byAdding: .month, value: value, to: month) ?? month
+        guard let next = calendar.date(byAdding: .month, value: value, to: month) else { return }
+        month = min(next, currentMonth)
     }
 
     /// 継続中のフェーズは終了日を持たないので、そのままだと未来の日まで色が付いてしまう。
