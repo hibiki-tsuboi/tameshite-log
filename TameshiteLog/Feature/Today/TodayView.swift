@@ -23,7 +23,6 @@ struct TodayView: View {
                         .navigationTitle("記録")
                 }
             }
-            .mainSettingsAccess()
         }
         .tracksCurrentDay($today)
     }

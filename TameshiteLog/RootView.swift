@@ -18,6 +18,7 @@ enum MainTab: Hashable {
     case record
     case compare
     case history
+    case settings
 }
 
 struct MainTabView: View {
@@ -30,9 +31,11 @@ struct MainTabView: View {
     init() {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
-        let initial: MainTab = arguments.contains("-compareTab")
-            ? .compare
-            : (arguments.contains("-historyTab") ? .history : .record)
+        let initial: MainTab =
+            if arguments.contains("-compareTab") { .compare }
+            else if arguments.contains("-historyTab") { .history }
+            else if arguments.contains("-settingsTab") { .settings }
+            else { .record }
         _selection = State(initialValue: initial)
         #else
         _selection = State(initialValue: .record)
@@ -49,6 +52,9 @@ struct MainTabView: View {
             }
             Tab("履歴", systemImage: "calendar", value: MainTab.history) {
                 MonthCalendarView()
+            }
+            Tab("設定", systemImage: "gearshape", value: MainTab.settings) {
+                SettingsView()
             }
         }
         .task {

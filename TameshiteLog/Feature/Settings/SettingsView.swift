@@ -2,8 +2,6 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -62,12 +60,6 @@ struct SettingsView: View {
             }
             .appBackground()
             .navigationTitle("設定")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("閉じる", systemImage: "xmark") { dismiss() }
-                        .labelStyle(.iconOnly)
-                }
-            }
         }
     }
 }

@@ -105,43 +105,6 @@ struct PhaseJourneyStrip: View {
     }
 }
 
-/// 設定をタブから外し、記録タブの右上に置く。付けるのは `TodayView` だけで、
-/// 比較と履歴のツールバーはその画面のもの（書き出す・今月）だけにする。
-/// 理由は CLAUDE.md の「設定の入口は記録タブの右上だけ」を参照。
-///
-/// 記号は歯車。ellipsis は iOS では「この画面のその他の操作」を指すので、画面と
-/// 関係のない全体設定の入口には使わない。
-private struct MainSettingsAccessModifier: ViewModifier {
-    #if DEBUG
-    @State private var isShowingSettings = ProcessInfo.processInfo.arguments.contains("-showSettings")
-    #else
-    @State private var isShowingSettings = false
-    #endif
-
-    func body(content: Content) -> some View {
-        content
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("設定", systemImage: "gearshape") {
-                        isShowingSettings = true
-                    }
-                    .labelStyle(.iconOnly)
-                    .accessibilityHint("観察プランやアプリの設定を開きます")
-                }
-            }
-            .sheet(isPresented: $isShowingSettings) {
-                SettingsView()
-                    .presentationDragIndicator(.visible)
-            }
-    }
-}
-
-extension View {
-    func mainSettingsAccess() -> some View {
-        modifier(MainSettingsAccessModifier())
-    }
-}
-
 struct ObservationPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
