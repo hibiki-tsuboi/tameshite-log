@@ -105,7 +105,12 @@ struct PhaseJourneyStrip: View {
     }
 }
 
-/// 設定をタブから外し、主要画面共通の右上メニューに置く。
+/// 設定をタブから外し、主要画面共通の右上に置く。3 タブとも同じ角に出すので、
+/// 「設定はどこ」の答えがタブによって変わらない。
+///
+/// 記号は歯車。ellipsis は iOS では「この画面のその他の操作」を指すので、画面と
+/// 関係のない全体設定の入口には使わない。比較と履歴では、その画面のアクション
+/// （書き出す・今月）の隣に並ぶため、同じ意味に読まれると実際に紛らわしかった。
 private struct MainSettingsAccessModifier: ViewModifier {
     #if DEBUG
     @State private var isShowingSettings = ProcessInfo.processInfo.arguments.contains("-showSettings")
@@ -117,7 +122,7 @@ private struct MainSettingsAccessModifier: ViewModifier {
         content
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("設定", systemImage: "ellipsis") {
+                    Button("設定", systemImage: "gearshape") {
                         isShowingSettings = true
                     }
                     .labelStyle(.iconOnly)
