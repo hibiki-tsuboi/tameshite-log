@@ -51,7 +51,6 @@ struct MainTabView: View {
                 MonthCalendarView()
             }
         }
-        .tint(ObservationTheme.ink)
         .task {
             // 通知の許可はあとから取り消せるし、時刻の設定も端末側で変わりうる。
             // 起動のたびに設定どおりに登録し直しておく。

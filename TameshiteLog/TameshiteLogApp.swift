@@ -47,6 +47,11 @@ struct TameshiteLogApp: App {
                 .environment(\.locale, Formatting.locale)
                 // アセットの AccentColor はターゲット設定に入れてあるが、iOS では
                 // それだけだと SwiftUI の色が既定の青のままだった。根で一度当てておく。
+                //
+                // AccentColor はライトとダークで別の色を持つ。下位のビューで
+                // ObservationTheme.ink のような固定色を .tint し直すと、その出し分けごと
+                // 消える。ink は白文字を乗せる塗り用の暗い色なので、前景に回った
+                // ダークでは面との差がなくなり、文字とアイコンが読めなくなる。
                 .tint(Color(.accent))
         }
         .modelContainer(container)
