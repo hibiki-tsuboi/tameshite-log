@@ -41,7 +41,6 @@ struct MonthCalendarView: View {
             }
             .appBackground()
             .navigationTitle("履歴")
-            .mainSettingsAccess()
             .navigationDestination(for: Date.self) { day in
                 DayDetailView(day: day)
             }

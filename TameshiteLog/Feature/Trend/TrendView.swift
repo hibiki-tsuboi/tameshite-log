@@ -41,7 +41,6 @@ struct TrendView: View {
             }
             .appBackground()
             .navigationTitle("比較")
-            .mainSettingsAccess()
             .toolbar {
                 if plan != nil {
                     ToolbarItem(placement: .primaryAction) {
