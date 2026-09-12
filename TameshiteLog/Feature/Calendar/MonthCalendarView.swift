@@ -46,9 +46,12 @@ struct MonthCalendarView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("今月", systemImage: "arrow.uturn.backward") {
+                    Button("今月") {
                         withAnimation { month = calendar.startOfMonth(for: today) }
                     }
+                    // 記号ではなく語で出す。ツールバーの矢印（arrow.uturn.backward）は
+                    // iOS では取り消しの記号で、記録を編集できるこの画面では
+                    // 「直前の編集を取り消す」に読めてしまう。
                     // 押せるかどうかと飛び先は同じ「今日」から決める。
                     .disabled(calendar.isDate(month, equalTo: today, toGranularity: .month))
                 }
