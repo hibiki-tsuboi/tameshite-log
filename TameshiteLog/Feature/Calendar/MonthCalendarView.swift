@@ -71,6 +71,27 @@ struct MonthCalendarView: View {
                 grid
             }
         }
+        .simultaneousGesture(monthSwipe)
+    }
+
+    /// 横スワイプでも月を送る。カレンダーで最初に試される操作なので受けておく。
+    /// チェブロンは残すので、見える入口が減るわけではない。
+    ///
+    /// `simultaneousGesture` なのは、この画面に先客が 2 つあるため。マスは
+    /// `NavigationLink` で、単独の `gesture` だとマスの上から始めた指を奪って
+    /// その日が開けなくなる。外側は縦の `ScrollView` で、こちらも同時に動けないと
+    /// カレンダーの上で縦に流せなくなる。
+    ///
+    /// 縦横を比べているのは、縦に流したつもりの指で月が飛ばないようにするため。
+    /// 斜めはスクロールに譲る。
+    private var monthSwipe: some Gesture {
+        DragGesture(minimumDistance: 24)
+            .onEnded { value in
+                let dx = value.translation.width
+                let dy = value.translation.height
+                guard abs(dx) > abs(dy) * 1.5, abs(dx) > 48 else { return }
+                withAnimation { shiftMonth(by: dx < 0 ? 1 : -1) }
+            }
     }
 
     private var monthHeader: some View {
