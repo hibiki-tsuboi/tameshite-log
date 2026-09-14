@@ -37,6 +37,9 @@ struct ExportView: View {
     @State private var period: ExportPeriod = .plan
     @State private var customStart = Calendar.current.date(byAdding: .day, value: -29, to: .now) ?? .now
     @State private var customEnd = Date.now
+    /// この画面ぶんの置き場所を決める符牒。画面ごとに分けないと、
+    /// 書き出し画面を 2 つ開いたときにファイルを消し合う。
+    @State private var session = UUID()
     @State private var files: ExportedFiles?
     @State private var failureMessage: String?
     /// 組み立て済みのレポート。範囲か記録が動いたときだけ作り直す。
@@ -292,7 +295,7 @@ struct ExportView: View {
         guard let report, report.hasRecords else { return }
 
         do {
-            let directory = try ExportService.prepareDirectory()
+            let directory = try ExportService.prepareExportDirectory(for: session)
             let stamp = report.generatedAt
 
             let pdf = directory.appending(
@@ -313,7 +316,12 @@ struct ExportView: View {
                 )
             )
 
+            try Task.checkCancellation()
             files = ExportedFiles(pdf: pdf, daily: daily, movements: movementFile)
+        } catch is CancellationError {
+            // 書き出す条件が変わって、新しい準備が始まっている。こちらの結果は捨てる。
+            // 失敗ではないので、画面にエラーは出さない。
+            return
         } catch {
             failureMessage = error.localizedDescription
         }

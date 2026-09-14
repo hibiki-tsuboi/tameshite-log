@@ -25,6 +25,11 @@ enum ReportPDFRenderer {
         }
 
         for (index, page) in pages.enumerated() {
+            // 書き出す期間を変えると `.task(id:)` がこの描画を打ち切る。打ち切りを見ずに
+            // 描き続けると、新しい準備が `prepareDirectory` で消したディレクトリへ書き込み、
+            // 同じ日なら同じファイル名なので新旧 2 つの描画が 1 つの PDF を取り合う。
+            try Task.checkCancellation()
+
             let renderer = ImageRenderer(
                 content: ReportPageView(
                     report: report,
@@ -46,6 +51,7 @@ enum ReportPDFRenderer {
             await Task.yield()
         }
 
+        try Task.checkCancellation()
         context.closePDF()
     }
 }

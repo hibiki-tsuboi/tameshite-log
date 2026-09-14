@@ -117,7 +117,8 @@ enum SampleData {
     @MainActor
     static func populate(_ context: ModelContext, today: Date = .now, calendar: Calendar = .current) {
         let store = ObservationStore(context: context, calendar: calendar)
-        store.deleteEverything()
+        // 開発用の入れ直しなので、消せなかったらそのまま重ねる意味がない。
+        try? store.deleteEverything()
 
         // 名前は種類を表す一般名詞にしてある。ストアのスクリーンショットはこのサンプルデータから
         // 撮るので、実在の商品名を入れると〈特定の処方薬〉と〈平均が何%減ったか〉が並んだ画像を

@@ -224,11 +224,6 @@ struct ObservationStore {
         phase.endDate = min(max(calendar.startOfDay(for: date), range.lowerBound), range.upperBound)
     }
 
-    /// 継続中のフェーズを指定日で終える。
-    func endPhase(_ phase: ObservationPhase, on date: Date = .now) {
-        setEnd(of: phase, to: date)
-    }
-
     func delete(_ phase: ObservationPhase) {
         context.delete(phase)
     }
@@ -341,9 +336,21 @@ struct ObservationStore {
 
     // MARK: - 1 日のまとめ
 
+    /// その日のまとめ。`movements(on:)` や `targetRecords(on:)` と同じ半開区間で引く。
+    ///
+    /// 等値で引いていたが、`date` は「記録した端末のタイムゾーンの 0 時」という絶対時刻で、
+    /// いまの端末の `startOfDay` と 1 秒でもずれると見つからない。引き継ぎファイルを
+    /// 別のタイムゾーンで復元すると、`restore(from:)` が書き出し時の値をそのまま戻すので
+    /// 実際にずれる。見つからなければ `ensureDailyRecord` が 2 行目を作ってしまい、
+    /// `#Unique<DailyRecord>([\.date])` は絶対時刻が違うぶん止められない。
+    /// 2 行あるとどちらが読まれるかは不定で、片方に書いた体調やメモが画面から消える。
     func dailyRecord(for date: Date) -> DailyRecord? {
         let day = calendar.startOfDay(for: date)
-        let descriptor = FetchDescriptor<DailyRecord>(predicate: #Predicate { $0.date == day })
+        guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { return nil }
+        let descriptor = FetchDescriptor<DailyRecord>(
+            predicate: #Predicate { $0.date >= day && $0.date < next },
+            sortBy: [SortDescriptor(\.date)]
+        )
         return (try? context.fetch(descriptor))?.first
     }
 
@@ -633,16 +640,16 @@ struct ObservationStore {
 
     // MARK: - データ管理
 
-    func deleteAllRecords() {
+    func deleteAllRecords() throws {
         deleteAll(BowelMovement.self)
         deleteAll(DailyRecord.self)
         deleteAll(TargetRecord.self)
-        save()
+        try commitDeletion()
     }
 
-    func deleteEverything() {
+    func deleteEverything() throws {
         deleteAllModels()
-        save()
+        try commitDeletion()
     }
 
     /// 全モデルを消す。保存はしない。
@@ -669,7 +676,16 @@ struct ObservationStore {
     }
 
     /// 削除は取り消せない操作なので、自動保存を待たずにここで確定させる。
-    private func save() {
-        try? context.save()
+    ///
+    /// 失敗は返す。握りつぶすと、画面は「削除しました」と言いながら記録が残る。
+    /// 消えたと思って書き出しも取らずに使い続けられるほうが、エラーを見せるより悪い。
+    /// 途中まで消えた状態で残さないよう、失敗したら巻き戻す。
+    private func commitDeletion() throws {
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            throw error
+        }
     }
 }

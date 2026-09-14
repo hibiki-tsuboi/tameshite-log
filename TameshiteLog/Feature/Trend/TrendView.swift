@@ -144,7 +144,7 @@ struct TrendView: View {
                     }?.id
                 } else if arguments.contains("-comparisonDetails") {
                     target = summaries.reversed().first { summary in
-                        comparisons.first { $0.subject.id == summary.id }?.meetsMinimum == true
+                        comparisons.first { $0.subject.id == summary.id }?.meetsMinimum(for: metric) == true
                     }?.id
                 } else {
                     target = nil

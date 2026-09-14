@@ -32,10 +32,6 @@ extension Calendar {
         dayCount(from: start, through: date)
     }
 
-    func isSameDay(_ lhs: Date, _ rhs: Date) -> Bool {
-        isDate(lhs, inSameDayAs: rhs)
-    }
-
     /// その月の 1 日。
     func startOfMonth(for date: Date) -> Date {
         self.date(from: dateComponents([.year, .month], from: date)) ?? startOfDay(for: date)

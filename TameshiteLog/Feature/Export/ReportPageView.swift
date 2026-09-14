@@ -6,7 +6,6 @@ enum ReportLayout {
     static let margin: CGFloat = 40
     static let footerHeight: CGFloat = 22
 
-    static var contentWidth: CGFloat { pageSize.width - margin * 2 }
     static var contentHeight: CGFloat { pageSize.height - margin * 2 - footerHeight }
 }
 
@@ -79,10 +78,20 @@ enum ReportPagination {
         return pages
     }
 
+    /// メモ 1 件が紙面で占める高さの見積もり。
+    ///
+    /// 改行ごとに数える。メモ欄は複数行入力なので、「朝 ふつう / 昼 下痢 / 夜 なし」のような
+    /// 短い行が続くメモが普通に入る。文字数だけで割ると 1 行と見積もって実際は 3 行になり、
+    /// 足りない高さのぶんがページ下端からはみ出す。`ImageRenderer` は紙の外を描かないので、
+    /// はみ出したメモは PDF から黙って消える。
     private static func estimatedHeight(_ note: ObservationReport.NoteEntry) -> CGFloat {
         let charactersPerLine = 34.0
-        let lines = max(1, (Double(note.text.count) / charactersPerLine).rounded(.up))
-        return CGFloat(lines) * 13 + 9
+        let lines = note.text
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .reduce(0.0) { total, line in
+                total + max(1, (Double(line.count) / charactersPerLine).rounded(.up))
+            }
+        return CGFloat(max(1, lines)) * 13 + 9
     }
 }
 
@@ -186,7 +195,7 @@ struct ReportPageView: View {
     }
 
     private var basisText: String {
-        var text = "平均の分母は記録がある日数です。記録のない日は「0 回」ではなく集計から外しています。「排便なし」と記録された日だけを 0 回として数えています。フェーズ別の集計は、期間の一部だけを書き出した場合もフェーズ全体の記録から計算しています。"
+        var text = "平均の分母は、その指標の記録がある日数です。記録のない日は「0 回」ではなく集計から外しています。平均排便回数を 0 回として数えているのは「排便なし」と記録された日だけで、体調やメモだけを書いた日は数えていません。便の形・腹痛・便意は、排便があった日の記録 1 件ずつから平均しています。観察対象の実施は、実施した日・実施しなかった日・どちらとも記録していない日を分けて数えています。記録していない日を「実施しなかった」とは数えていません。フェーズ別の集計は、期間の一部だけを書き出した場合もフェーズ全体の記録から計算しています。"
         if report.hasWarmupExclusion {
             text += "開始直後を集計から外す設定のフェーズでは、その日数ぶんを平均と比較から除いています。除いた日の記録は残っています。"
         }
@@ -322,10 +331,20 @@ struct ReportPageView: View {
     /// 先頭の名前を代表として書くと、残りの行が別の期間と比べたものとして読める。
     private func comparisonNote(for comparisons: [PhaseComparison]) -> String {
         let names = Set(comparisons.map(\.reference.name))
-        guard names.count == 1, let name = names.first else {
-            return "各フェーズの直前の期間との差です。かっこ内は変化率。"
+        var text = if names.count == 1, let name = names.first {
+            "「\(name)」との差です。かっこ内は変化率。"
+        } else {
+            "各フェーズの直前の期間との差です。かっこ内は変化率。"
         }
-        return "「\(name)」との差です。かっこ内は変化率。"
+        let hasThinComparison = comparisons.contains { comparison in
+            ObservationMetric.allCases.contains { metric in
+                comparison.change(for: metric) != nil && !comparison.meetsMinimum(for: metric)
+            }
+        }
+        if hasThinComparison {
+            text += "※ は、どちらかの期間でその指標の記録が\(AnalysisBasis.minimumComparisonDays)日ぶんに満たない比較です。差が日々のばらつきの範囲かどうかは、この記録からは読み取れません。"
+        }
+        return text
     }
 
     // MARK: - 推移
@@ -367,7 +386,7 @@ struct ReportPageView: View {
                     cell(Formatting.shortDate(day.date), width: dayWidths[0], alignment: .leading)
                     cell(weekday(day.date), width: dayWidths[1], alignment: .center)
                     cell(day.phaseName, width: dayWidths[2], alignment: .leading)
-                    cell(day.hasRecord ? "\(day.tally.bowelCount)" : "—", width: dayWidths[3], alignment: .trailing, numeric: true)
+                    cell(day.hasBowelCount ? "\(day.tally.bowelCount)" : "—", width: dayWidths[3], alignment: .trailing, numeric: true)
                     cell(optional(day.tally.averageBristol), width: dayWidths[4], alignment: .trailing, numeric: true)
                     cell(optional(day.tally.averagePain), width: dayWidths[5], alignment: .trailing, numeric: true)
                     cell(optional(day.tally.averageUrgency), width: dayWidths[6], alignment: .trailing, numeric: true)
@@ -453,11 +472,25 @@ struct ReportPageView: View {
     private func adherenceText(for summary: PhaseSummary) -> String? {
         guard !summary.adherence.isEmpty else { return nil }
         if summary.adherence.count == 1, let item = summary.adherence.first {
-            return "実施 \(item.analyzedDays)日中\(item.completedDays)日"
+            return counts(for: item)
         }
         return summary.adherence
-            .map { "\($0.name) \($0.analyzedDays)日中\($0.completedDays)日" }
-            .joined(separator: " ・ ")
+            .map { "\($0.name) \(counts(for: $0))" }
+            .joined(separator: " ／ ")
+    }
+
+    /// 実施した日数だけでなく、実施しなかった日数と未記録の日数も書く。
+    ///
+    /// 「20日中14日」とだけ書くと残りの 6 日が「実施しなかった日」に見えるが、
+    /// 記録していないだけの日と区別がつかない。紙面は人に渡すものなので、
+    /// 画面と同じく 3 つを分けて出す。率にしないのも画面と同じ理由。
+    private func counts(for item: TargetAdherence) -> String {
+        var detail: [String] = []
+        if item.skippedDays > 0 { detail.append("実施しなかった \(item.skippedDays)日") }
+        if item.untrackedDays > 0 { detail.append("未記録 \(item.untrackedDays)日") }
+        let base = "実施 \(item.completedDays)日"
+        guard !detail.isEmpty else { return base }
+        return "\(base)（\(detail.joined(separator: "・"))）"
     }
 
     private func value(_ metric: ObservationMetric, in summary: PhaseSummary) -> String {
@@ -468,10 +501,13 @@ struct ReportPageView: View {
     /// 差と変化率をひとつのセルに収める。単位は列見出しに任せる。
     private func delta(_ metric: ObservationMetric, in comparison: PhaseComparison) -> String {
         guard let change = comparison.change(for: metric) else { return "—" }
-        let rounded = (change.delta * 10).rounded() / 10
-        guard rounded != 0 else { return "±0" }
-        guard let ratio = change.ratio else { return Formatting.signedFixedDecimal(rounded) }
-        return "\(Formatting.signedFixedDecimal(rounded))（\(Formatting.signedPercent(ratio))）"
+        // 日数が足りない比較には印を付ける。画面では文章を伏せて断り書きに差し替えているが、
+        // 表にはその一文を置く場所がない。数字は出したうえで、脚注へ送る。
+        let mark = comparison.meetsMinimum(for: metric) ? "" : "※"
+        let rounded = change.roundedDelta
+        guard rounded != 0 else { return "±0\(mark)" }
+        guard let ratio = change.ratio else { return "\(Formatting.signedFixedDecimal(rounded))\(mark)" }
+        return "\(Formatting.signedFixedDecimal(rounded))（\(Formatting.signedPercent(ratio))）\(mark)"
     }
 
     private func optional(_ value: Double?) -> String {

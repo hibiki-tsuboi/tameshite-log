@@ -11,6 +11,7 @@ struct DataManagementView: View {
     @State private var isCreatingTransferFile = false
     @State private var isChoosingTransferFile = false
     @State private var creationError: String?
+    @State private var deletionError: String?
 
     var body: some View {
         Form {
@@ -104,7 +105,7 @@ struct DataManagementView: View {
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("記録をすべて削除しますか？", isPresented: $isConfirmingRecordDeletion, titleVisibility: .visible) {
             Button("削除", role: .destructive) {
-                ObservationStore(context: context).deleteAllRecords()
+                delete { try ObservationStore(context: context).deleteAllRecords() }
             }
             Button("キャンセル", role: .cancel) {}
         } message: {
@@ -112,7 +113,7 @@ struct DataManagementView: View {
         }
         .confirmationDialog("すべてのデータを削除しますか？", isPresented: $isConfirmingFullDeletion, titleVisibility: .visible) {
             Button("削除", role: .destructive) {
-                ObservationStore(context: context).deleteEverything()
+                delete { try ObservationStore(context: context).deleteEverything() }
             }
             Button("キャンセル", role: .cancel) {}
         } message: {
@@ -126,6 +127,26 @@ struct DataManagementView: View {
             if let creationError {
                 Text(creationError)
             }
+        }
+        // 保存に失敗した削除は巻き戻してある。消えたと思わせないよう、ここで伝える。
+        .alert("削除できませんでした", isPresented: hasDeletionError) {
+            Button("OK") { deletionError = nil }
+        } message: {
+            if let deletionError {
+                Text(deletionError)
+            }
+        }
+    }
+
+    private var hasDeletionError: Binding<Bool> {
+        Binding(get: { deletionError != nil }, set: { if !$0 { deletionError = nil } })
+    }
+
+    private func delete(_ operation: () throws -> Void) {
+        do {
+            try operation()
+        } catch {
+            deletionError = "記録は消えていません。空き容量を確かめて、もう一度お試しください。（\(error.localizedDescription)）"
         }
     }
 

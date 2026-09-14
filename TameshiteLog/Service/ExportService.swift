@@ -30,7 +30,7 @@ enum ExportService {
                 csvDate(day.date),
                 weekday(day.date),
                 day.phaseName,
-                day.hasRecord ? String(tally.bowelCount) : "",
+                day.hasBowelCount ? String(tally.bowelCount) : "",
                 number(tally.averageBristol),
                 number(tally.averagePain),
                 number(tally.averageUrgency),
@@ -76,12 +76,38 @@ enum ExportService {
     ///
     /// 名前を分けられるようにしてある。引き継ぎファイルを同じ場所に作ると、
     /// 作り直しのたびに書き出した CSV と PDF まで消えてしまう。
-    static func prepareDirectory(named name: String = "Export") throws -> URL {
+    static func prepareDirectory(named name: String) throws -> URL {
         let directory = FileManager.default.temporaryDirectory.appending(path: name, directoryHint: .isDirectory)
         try? FileManager.default.removeItem(at: directory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }
+
+    /// 書き出し画面 1 つぶんの置き場所を作る。
+    ///
+    /// 画面ごとに別のディレクトリにする。`prepareDirectory(named:)` は渡された場所を
+    /// 空にしてから作り直すので、書き出し画面が 2 つ開いていると、あとから準備を始めた側が
+    /// 先に開いた側の PDF と CSV まで消す。消えたことは画面に出ず、先に開いた側の共有ボタンだけが
+    /// 実体のない URL を指したままになる。書き出しの入口は比較タブと設定に分かれているので、
+    /// 2 つ開いた状態は起こりうる。
+    ///
+    /// 前回の起動で残ったぶんは、プロセスで最初に準備するときにまとめて片付ける。
+    /// その時点では動いている書き出しがまだ無いので、誰のファイルも巻き添えにしない。
+    static func prepareExportDirectory(for session: UUID) throws -> URL {
+        if !hasClearedExportRoot {
+            hasClearedExportRoot = true
+            try? FileManager.default.removeItem(at: exportRoot)
+        }
+        return try prepareDirectory(named: "\(exportRootName)/\(session.uuidString)")
+    }
+
+    private static let exportRootName = "Export"
+
+    private static var exportRoot: URL {
+        FileManager.default.temporaryDirectory.appending(path: exportRootName, directoryHint: .isDirectory)
+    }
+
+    private static var hasClearedExportRoot = false
 
     @discardableResult
     static func write(_ text: String, to url: URL) throws -> URL {

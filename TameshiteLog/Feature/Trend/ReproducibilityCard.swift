@@ -129,7 +129,7 @@ struct ReproducibilityCard: View {
                     .foregroundStyle(.primary)
                     .labelStyle(.titleAndIcon)
 
-                    if !round.meetsMinimum {
+                    if !round.meetsMinimum(for: metric) {
                         Text("日数不足")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)

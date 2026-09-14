@@ -20,6 +20,8 @@ struct ObservationReport: Sendable {
         var id: Date { tally.date }
         var date: Date { tally.date }
         var hasRecord: Bool { tally.hasRecord }
+        /// 排便回数が分かっている日か。まとめだけ書いた日に 0 と印字しないために持つ。
+        var hasBowelCount: Bool { tally.hasBowelCount }
     }
 
     /// 排便 1 件分。明細 CSV に使う。

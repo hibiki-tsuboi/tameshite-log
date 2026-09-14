@@ -6,7 +6,6 @@ import SwiftData
 enum ObservationTheme {
     static let ink = Color(red: 0.04, green: 0.34, blue: 0.29)
     static let mint = Color(red: 0.42, green: 0.84, blue: 0.73)
-    static let sand = Color(red: 0.96, green: 0.91, blue: 0.78)
 
     static var surface: Color { Color(.secondarySystemBackground) }
     static var raisedSurface: Color { Color(.tertiarySystemBackground) }

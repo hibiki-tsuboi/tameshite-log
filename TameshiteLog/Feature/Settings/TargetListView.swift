@@ -6,6 +6,9 @@ struct TargetListView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \ObservationTarget.createdAt) private var targets: [ObservationTarget]
 
+    /// 削除の確認待ちの対象。
+    @State private var targetPendingDeletion: ObservationTarget?
+
     var body: some View {
         List {
             if targets.isEmpty {
@@ -33,9 +36,13 @@ struct TargetListView: View {
                                     }
                                 }
                             }
-                            .swipeActions(edge: .trailing) {
+                            // 観察対象を消すと、実施の記録と処方箋の写真も一緒に消える
+                            // （`ObservationTarget` の records と attachments は cascade）。
+                            // 指 1 本で数か月ぶんの記録が戻せなくなるので、フルスワイプでは
+                            // 実行させず、何が消えるかを数えて見せてから確かめる。
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button("削除", systemImage: "trash", role: .destructive) {
-                                    ObservationStore(context: context).delete(target)
+                                    targetPendingDeletion = target
                                 }
                             }
                         }
@@ -46,6 +53,23 @@ struct TargetListView: View {
         .scrollContentBackground(.hidden)
         .appBackground()
         .navigationTitle("観察対象")
+        .confirmationDialog(
+            "「\(targetPendingDeletion?.name ?? "")」を削除しますか？",
+            isPresented: Binding(
+                get: { targetPendingDeletion != nil },
+                set: { if !$0 { targetPendingDeletion = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: targetPendingDeletion
+        ) { target in
+            Button("削除", role: .destructive) {
+                ObservationStore(context: context).delete(target)
+                targetPendingDeletion = nil
+            }
+            Button("キャンセル", role: .cancel) { targetPendingDeletion = nil }
+        } message: { target in
+            Text(deletionMessage(for: target))
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 NavigationLink {
@@ -55,6 +79,16 @@ struct TargetListView: View {
                 }
             }
         }
+    }
+
+    /// 対象と一緒に消えるものを数えて書く。「削除しますか」だけでは、
+    /// 実施の記録と写真まで消えることが名前からは読めない。
+    private func deletionMessage(for target: ObservationTarget) -> String {
+        var parts: [String] = []
+        if !target.records.isEmpty { parts.append("実施の記録 \(target.records.count)日ぶん") }
+        if !target.attachments.isEmpty { parts.append("写真 \(target.attachments.count)枚") }
+        guard !parts.isEmpty else { return "この操作は取り消せません。" }
+        return "\(parts.joined(separator: "と"))も一緒に消えます。この操作は取り消せません。"
     }
 }
 

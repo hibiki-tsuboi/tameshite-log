@@ -92,13 +92,13 @@ enum ObservationAnalyzer {
             recordedDays: recorded.count,
             warmupDays: phase.warmupDays,
             analyzedDays: window.analyzedDays,
-            totalBowelCount: windowMovements.count,
             averageBowelCount: values.average(.bowelCount),
             averageBristol: values.average(.bristol),
             averagePain: values.average(.abdominalPain),
             averageUrgency: values.average(.urgency),
             spreads: values.spreads,
-            adherence: adherence(for: phase, targetRecords: targetRecords, window: window, calendar: calendar)
+            adherence: adherence(for: phase, targetRecords: targetRecords, window: window, calendar: calendar),
+            metricRecordedDays: values.recordedDays
         )
     }
 
@@ -130,14 +130,6 @@ enum ObservationAnalyzer {
             guard let reference, reference.id != summary.id else { return nil }
             return comparison(subject: summary, reference: reference, kind: kind)
         }
-    }
-
-    /// ベースラインがあるフェーズでも、直前のフェーズとの比較を別途知りたい場合に使う。
-    static func previousComparison(for summary: PhaseSummary, in summaries: [PhaseSummary]) -> PhaseComparison? {
-        guard let index = summaries.firstIndex(where: { $0.id == summary.id }),
-              let previous = summaries[..<index].last(where: \.hasEnoughData),
-              summary.hasEnoughData else { return nil }
-        return comparison(subject: summary, reference: previous, kind: .previous)
     }
 
     static func comparison(
@@ -292,8 +284,8 @@ enum ObservationAnalyzer {
                 phaseID: phase.persistentModelID,
                 targetID: target.persistentModelID,
                 targetName: target.name,
-                completedDays: completed.recordedDays,
-                skippedDays: skipped.recordedDays,
+                metricCompletedDays: completed.values.recordedDays,
+                metricSkippedDays: skipped.values.recordedDays,
                 changes: changes
             )
         }
@@ -344,26 +336,37 @@ enum ObservationAnalyzer {
     private struct MetricValues {
         var averages: [ObservationMetric: Double] = [:]
         var spreads: [ObservationMetric: MetricSpread] = [:]
+        /// 指標ごとに、平均の根拠になった日数。最小日数の判定はここを見る。
+        var recordedDays: [ObservationMetric: Int] = [:]
 
         func average(_ metric: ObservationMetric) -> Double? { averages[metric] }
     }
 
     /// ブリストル値・腹痛・急な便意は、日ごとの平均ではなく記録 1 件ずつの平均を取る。
     /// 排便回数が多い日と少ない日を同じ重みで扱わないため。
-    /// 排便回数だけは 1 日 1 件なので、記録が付いた日を分母にする。
+    /// 排便回数だけは 1 日 1 件なので、日を分母にする。
+    ///
+    /// 分母になる日は指標ごとに違う。排便回数は「回数が分かっている日」＝排便があった日と
+    /// 「排便なし」と書かれた日で、体調やメモだけ書いた日は入れない。入れると書き忘れが
+    /// 0 回として平均を押し下げる。便の形・腹痛・便意は、排便が 1 件でもあった日だけが
+    /// 値を持つ。日数もそれぞれの分母で数えて持ち帰る。
     private static func metricValues(recordedTallies: [DailyTally], movements: [BowelMovement]) -> MetricValues {
         var values = MetricValues()
 
-        func put(_ metric: ObservationMetric, _ samples: [Double]) {
+        func put(_ metric: ObservationMetric, _ samples: [Double], days: Int) {
             guard let mean = average(samples), let minimum = samples.min(), let maximum = samples.max() else { return }
             values.averages[metric] = mean
             values.spreads[metric] = MetricSpread(minimum: minimum, maximum: maximum)
+            values.recordedDays[metric] = days
         }
 
-        put(.bowelCount, recordedTallies.map { Double($0.bowelCount) })
-        put(.bristol, movements.map { Double($0.bristolScale.rawValue) })
-        put(.abdominalPain, movements.map { Double($0.abdominalPain.rawValue) })
-        put(.urgency, movements.map { Double($0.urgency.rawValue) })
+        let countedDays = recordedTallies.filter(\.hasBowelCount)
+        let movementDays = recordedTallies.count(where: \.hasMovementMetrics)
+
+        put(.bowelCount, countedDays.map { Double($0.bowelCount) }, days: countedDays.count)
+        put(.bristol, movements.map { Double($0.bristolScale.rawValue) }, days: movementDays)
+        put(.abdominalPain, movements.map { Double($0.abdominalPain.rawValue) }, days: movementDays)
+        put(.urgency, movements.map { Double($0.urgency.rawValue) }, days: movementDays)
         return values
     }
 

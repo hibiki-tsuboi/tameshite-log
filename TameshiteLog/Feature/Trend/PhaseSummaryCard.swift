@@ -173,8 +173,8 @@ struct PhaseSummaryCard: View {
                 )
 
                 basisNote(
-                    meetsMinimum: comparison.meetsMinimum,
-                    thinnerSideDays: comparison.thinnerSideDays,
+                    meetsMinimum: comparison.meetsMinimum(for: metric),
+                    thinnerSideDays: comparison.thinnerSideDays(for: metric),
                     sentence: change.sentence(referenceName: comparison.reference.name)
                 )
             } else {
@@ -199,15 +199,15 @@ struct PhaseSummaryCard: View {
                     if let change = item.change(for: metric) {
                         changeBox(
                             change: change,
-                            subjectName: "\(AdherenceComparison.completedLabel)（\(item.completedDays)日）",
+                            subjectName: "\(AdherenceComparison.completedLabel)（記録\(item.completedDays(for: metric))日）",
                             subjectSpread: nil,
-                            referenceName: "\(AdherenceComparison.skippedLabel)（\(item.skippedDays)日）",
+                            referenceName: "\(AdherenceComparison.skippedLabel)（記録\(item.skippedDays(for: metric))日）",
                             referenceSpread: nil
                         )
 
                         basisNote(
-                            meetsMinimum: item.meetsMinimum,
-                            thinnerSideDays: item.thinnerSideDays,
+                            meetsMinimum: item.meetsMinimum(for: metric),
+                            thinnerSideDays: item.thinnerSideDays(for: metric),
                             sentence: change.sentence(referenceName: AdherenceComparison.skippedLabel)
                         )
                     } else {
@@ -218,7 +218,7 @@ struct PhaseSummaryCard: View {
                 }
             }
 
-            Text("同じ期間の中での比較なので、期間ごとの違いは混ざっていません。どちらとも記録していない日は入れていません。")
+            Text("同じ期間の中での比較なので、期間ごとの違いは混ざっていません。どちらとも記録していない日は入れていません。かっこ内は、上の「実施の記録」で数えた日のうち、この指標の平均が出ている日数です。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -343,27 +343,6 @@ struct PhaseSummaryCard: View {
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         }
-    }
-
-    private func valueRow(name: String, value: String, spread: MetricSpread?, emphasized: Bool) -> some View {
-        HStack {
-            Text(name)
-                .font(.subheadline)
-                .foregroundStyle(emphasized ? .primary : .secondary)
-                .lineLimit(1)
-            Spacer(minLength: 8)
-            VStack(alignment: .trailing, spacing: 1) {
-                Text(value)
-                    .font(.system(.subheadline, design: .rounded, weight: emphasized ? .semibold : .regular))
-                    .foregroundStyle(emphasized ? .primary : .secondary)
-                if let spread, !spread.isFlat {
-                    Text(metric.formattedSpread(spread))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .accessibilityElement(children: .combine)
     }
 
     // MARK: -

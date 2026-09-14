@@ -73,8 +73,6 @@ final class ObservationPhase {
         self.targets = targets
     }
 
-    var isOngoing: Bool { endDate == nil }
-
     func contains(_ date: Date, calendar: Calendar = .current) -> Bool {
         let day = calendar.startOfDay(for: date)
         guard day >= calendar.startOfDay(for: startDate) else { return false }

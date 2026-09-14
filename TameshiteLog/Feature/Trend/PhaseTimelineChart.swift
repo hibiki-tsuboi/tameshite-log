@@ -23,6 +23,34 @@ struct PhaseTimelineChart: View {
         tallies.filter { metric.value(in: $0) != nil }
     }
 
+    /// 続いている日の塊。線はこの単位で引く。
+    private struct Segment: Identifiable {
+        var id: Int
+        var points: [DailyTally]
+    }
+
+    /// 記録のある日を、日付が途切れないところで区切る。
+    ///
+    /// 線を 1 本につなぐと、記録のない何日かをなめらかな曲線がまたいで、その間も
+    /// 測ったように見える。点を打たないだけでは「記録がない日は描かない」という
+    /// 約束を守りきれないので、途切れたら線も切る。
+    private var segments: [Segment] {
+        var result: [Segment] = []
+        var current: [DailyTally] = []
+        let calendar = Calendar.current
+
+        for tally in points {
+            if let last = current.last,
+               calendar.dateComponents([.day], from: last.date, to: tally.date).day != 1 {
+                result.append(Segment(id: result.count, points: current))
+                current = []
+            }
+            current.append(tally)
+        }
+        if !current.isEmpty { result.append(Segment(id: result.count, points: current)) }
+        return result
+    }
+
     var body: some View {
         Chart {
             ForEach(summaries) { summary in
@@ -55,17 +83,24 @@ struct PhaseTimelineChart: View {
                 }
             }
 
+            ForEach(segments) { segment in
+                ForEach(segment.points) { tally in
+                    if let value = metric.value(in: tally) {
+                        LineMark(
+                            x: .value("日付", tally.date),
+                            y: .value(metric.title, value),
+                            series: .value("区間", segment.id)
+                        )
+                        .interpolationMethod(.monotone)
+                        .foregroundStyle(Color.primary.opacity(0.75))
+                        .lineStyle(StrokeStyle(lineWidth: 2))
+                        .accessibilityHidden(true)
+                    }
+                }
+            }
+
             ForEach(points) { tally in
                 if let value = metric.value(in: tally) {
-                    LineMark(
-                        x: .value("日付", tally.date),
-                        y: .value(metric.title, value)
-                    )
-                    .interpolationMethod(.monotone)
-                    .foregroundStyle(Color.primary.opacity(0.75))
-                    .lineStyle(StrokeStyle(lineWidth: 2))
-                    .accessibilityHidden(true)
-
                     PointMark(
                         x: .value("日付", tally.date),
                         y: .value(metric.title, value)

@@ -26,12 +26,20 @@ struct DailyTally: Identifiable, Hashable, Sendable {
 
     var id: Date { date }
 
-    /// 記録が付いた日かどうか。
-    /// まとめだけ書かれた日は「排便 0 回」として扱い、何も書かれていない日は集計から外す。
-    /// 未記録を 0 と数えると平均が実態より低く出てしまうため。
+    /// その日に何か書かれたかどうか。日数の表示と、記録のある日の数え上げに使う。
     ///
     /// 「排便なし」は `DailyRecord.isEmpty` を false にするので `hasSummary` に含まれる。
     var hasRecord: Bool { bowelCount > 0 || hasSummary }
+
+    /// 排便回数が分かっている日かどうか。平均排便回数の分母はこちら。
+    ///
+    /// 体調やメモだけ書いた日を 0 回と数えない。その日は排便がなかったのかもしれないし、
+    /// 書き忘れただけかもしれず、記録からはどちらとも言えないため。
+    /// 0 回として数えてよいのは、本人が「排便なし」と書いた日だけ。
+    var hasBowelCount: Bool { bowelCount > 0 || hadNoBowelMovement }
+
+    /// 便の形・腹痛・急な便意の平均に寄与する日。これらは排便 1 件ごとに記録される。
+    var hasMovementMetrics: Bool { bowelCount > 0 }
 }
 
 /// 指標 1 つ分のばらつき。
@@ -78,14 +86,13 @@ struct PhaseSummary: Identifiable, Sendable {
 
     /// フェーズが何日続いたか（今日で打ち切り）。
     var elapsedDays: Int
-    /// そのうち実際に記録が付いた日数。平均の分母はこちら。
+    /// そのうち実際に記録が付いた日数。期間の説明に使う。
     var recordedDays: Int
     /// 集計から外した、開始直後の日数。
     var warmupDays: Int
     /// 立ち上がりを外したあとの、集計対象になる日数。
     var analyzedDays: Int
 
-    var totalBowelCount: Int
     var averageBowelCount: Double?
     var averageBristol: Double?
     var averagePain: Double?
@@ -95,12 +102,26 @@ struct PhaseSummary: Identifiable, Sendable {
     /// フェーズに紐づいた観察対象の実施状況。
     var adherence: [TargetAdherence]
 
+    /// 指標ごとの、平均の根拠になった日数。
+    ///
+    /// `recordedDays` とは別に持つ。平均排便回数の分母は「排便回数が分かっている日」で、
+    /// 便の形・腹痛・便意の分母は「排便が 1 件でもあった日」なので、指標ごとに違う。
+    /// 「排便なし」の日が多い観察では、記録 10 日でも便の形は 1 日ぶんしかない、が普通に起きる。
+    var metricRecordedDays: [ObservationMetric: Int]
+
     var id: PersistentIdentifier { phaseID }
-    var isOngoing: Bool { endDate == nil }
     var hasEnoughData: Bool { recordedDays > 0 }
 
-    /// 差を文章にしてよいだけの日数がそろっているか。
-    var meetsComparisonMinimum: Bool { recordedDays >= AnalysisBasis.minimumComparisonDays }
+    /// その指標の平均が、何日ぶんの記録から出ているか。
+    func recordedDays(for metric: ObservationMetric) -> Int { metricRecordedDays[metric] ?? 0 }
+
+    /// その指標の差を文章にしてよいだけの日数がそろっているか。
+    ///
+    /// 指標ごとに見る。`recordedDays` で一括に判定すると、記録日数だけは足りていて
+    /// その指標のサンプルが 1 件しかない期間でも断定した一文が出てしまう。
+    func meetsComparisonMinimum(for metric: ObservationMetric) -> Bool {
+        recordedDays(for: metric) >= AnalysisBasis.minimumComparisonDays
+    }
 
     /// 立ち上がりの除外がフェーズ全体を飲み込んでしまった状態。
     /// 「記録がない」のとは理由が違うので、画面で書き分けられるように分けておく。
@@ -180,7 +201,7 @@ enum ObservationMetric: String, CaseIterable, Identifiable, Sendable {
 
     func value(in tally: DailyTally) -> Double? {
         switch self {
-        case .bowelCount: tally.hasRecord ? Double(tally.bowelCount) : nil
+        case .bowelCount: tally.hasBowelCount ? Double(tally.bowelCount) : nil
         case .bristol: tally.averageBristol
         case .abdominalPain: tally.averagePain
         case .urgency: tally.averageUrgency
@@ -220,13 +241,19 @@ struct MetricChange: Identifiable, Sendable {
     var id: String { metric.rawValue }
     var delta: Double { subject - reference }
 
-    /// 変化率。基準が 0 のときは割合を出せないので nil。
-    var ratio: Double? {
-        guard reference != 0 else { return nil }
-        return delta / abs(reference)
-    }
+    /// 画面にも紙面にも、差はこの丸めた値で出る。向きと変化率もここから決める。
+    var roundedDelta: Double { (delta * 10).rounded() / 10 }
 
-    var isIncrease: Bool { delta > 0 }
+    /// 変化率。基準が 0 のときは割合を出せないので nil。
+    ///
+    /// 丸めた差から出す。生の差で割ると、差が「0」と表示されている横に「-4%」が並び、
+    /// 同じ箱の中で数字と割合が食い違う。読み手が見ている数どうしの比にする。
+    /// 丸めて 0 になる差に割合はないので、そのときも nil。
+    var ratio: Double? {
+        let rounded = roundedDelta
+        guard rounded != 0, reference != 0 else { return nil }
+        return rounded / abs(reference)
+    }
 
     /// 画面に出す小数第 1 位にそろえたあとの変化方向。
     ///
@@ -234,7 +261,7 @@ struct MetricChange: Identifiable, Sendable {
     /// 「差は 0 なのに増えた」といった食い違いが起きる。再現性チェックも
     /// 利用者が読んでいる数値と同じ丸め方で方向を判定する。
     var recordedDirection: RecordedChangeDirection {
-        let rounded = (delta * 10).rounded() / 10
+        let rounded = roundedDelta
         if rounded > 0 { return .increase }
         if rounded < 0 { return .decrease }
         return .unchanged
@@ -242,7 +269,7 @@ struct MetricChange: Identifiable, Sendable {
 
     /// 事実だけを述べた一文。効いている／合っているといった判断は含めない。
     func sentence(referenceName: String) -> String {
-        let rounded = (delta * 10).rounded() / 10
+        let rounded = roundedDelta
         guard rounded != 0 else {
             return "「\(referenceName)」と比べて、\(metric.averageTitle)は変わっていません。"
         }
@@ -283,13 +310,16 @@ struct PhaseComparison: Identifiable, Sendable {
 
     var id: String { "\(subject.id)-\(kind.rawValue)" }
 
-    /// 両側に十分な日数があるか。片側でも足りなければ、差の数値は出しても断定した一文は出さない。
-    var meetsMinimum: Bool {
-        subject.meetsComparisonMinimum && reference.meetsComparisonMinimum
+    /// その指標について、両側に十分な日数があるか。
+    /// 片側でも足りなければ、差の数値は出しても断定した一文は出さない。
+    func meetsMinimum(for metric: ObservationMetric) -> Bool {
+        subject.meetsComparisonMinimum(for: metric) && reference.meetsComparisonMinimum(for: metric)
     }
 
     /// 足りていない側の日数。画面で「あと何日ぶんか」を書くために使う。
-    var thinnerSideDays: Int { min(subject.recordedDays, reference.recordedDays) }
+    func thinnerSideDays(for metric: ObservationMetric) -> Int {
+        min(subject.recordedDays(for: metric), reference.recordedDays(for: metric))
+    }
 
     func change(for metric: ObservationMetric) -> MetricChange? {
         changes.first { $0.metric == metric }
@@ -315,7 +345,7 @@ struct ReproducibilityCheck: Identifiable, Sendable {
     /// 選択中の指標について、両側に最低日数がそろった比較だけを返す。
     func comparableChanges(for metric: ObservationMetric) -> [MetricChange] {
         rounds.compactMap { round in
-            guard round.meetsMinimum else { return nil }
+            guard round.meetsMinimum(for: metric) else { return nil }
             return round.change(for: metric)
         }
     }
@@ -368,10 +398,13 @@ struct AdherenceComparison: Identifiable, Sendable {
     var phaseID: PersistentIdentifier
     var targetID: PersistentIdentifier
     var targetName: String
-    /// 実施したと記録した日のうち、記録が付いた日数。
-    var completedDays: Int
-    /// 実施しなかったと記録した日のうち、記録が付いた日数。
-    var skippedDays: Int
+    /// 実施した側の、指標ごとの記録日数。
+    ///
+    /// 側ごとの合計ではなく指標ごとに持つ。実施した日が 14 日あっても、
+    /// そのうち排便があったのが 3 日なら、便の形の平均は 3 日ぶんでしかない。
+    var metricCompletedDays: [ObservationMetric: Int]
+    /// 実施しなかった側の、指標ごとの記録日数。
+    var metricSkippedDays: [ObservationMetric: Int]
     var changes: [MetricChange]
 
     var id: String { "\(phaseID)-\(targetID)" }
@@ -379,12 +412,19 @@ struct AdherenceComparison: Identifiable, Sendable {
     static let completedLabel = "実施した日"
     static let skippedLabel = "実施しなかった日"
 
-    var meetsMinimum: Bool {
-        completedDays >= AnalysisBasis.minimumComparisonDays
-            && skippedDays >= AnalysisBasis.minimumComparisonDays
+    /// その指標の平均が、実施した側で何日ぶんの記録から出ているか。
+    func completedDays(for metric: ObservationMetric) -> Int { metricCompletedDays[metric] ?? 0 }
+    /// その指標の平均が、実施しなかった側で何日ぶんの記録から出ているか。
+    func skippedDays(for metric: ObservationMetric) -> Int { metricSkippedDays[metric] ?? 0 }
+
+    func meetsMinimum(for metric: ObservationMetric) -> Bool {
+        completedDays(for: metric) >= AnalysisBasis.minimumComparisonDays
+            && skippedDays(for: metric) >= AnalysisBasis.minimumComparisonDays
     }
 
-    var thinnerSideDays: Int { min(completedDays, skippedDays) }
+    func thinnerSideDays(for metric: ObservationMetric) -> Int {
+        min(completedDays(for: metric), skippedDays(for: metric))
+    }
 
     func change(for metric: ObservationMetric) -> MetricChange? {
         changes.first { $0.metric == metric }
