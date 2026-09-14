@@ -255,7 +255,10 @@ private struct DayCell: View {
                 .foregroundStyle(isToday ? Color.white : (isInDisplayedMonth ? Color.primary : Color.secondary.opacity(0.5)))
                 .frame(width: 26, height: 26)
                 .background {
-                    if isToday { Circle().fill(Color.accentColor) }
+                    // 塗りは ink。アクセントは前景色で、ダークでは面から浮くよう明るくなる
+                    // （#2FB79E）ので、そこへ白文字を乗せると 2.5:1 まで落ちる。
+                    // ink は白文字を乗せるための暗い色で、両モードとも 8.5:1 になる。
+                    if isToday { Circle().fill(ObservationTheme.ink) }
                 }
 
             if bowelCount > 0 {

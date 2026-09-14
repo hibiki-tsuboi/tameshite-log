@@ -156,9 +156,21 @@ private struct BristolScaleRail: View {
                             .font(.system(.body, design: .rounded, weight: .bold))
                             .frame(maxWidth: .infinity)
                             .frame(height: 42)
-                            .foregroundStyle(isSelected ? Color.white : scale.tint)
+                            // 選んだ側の文字は白ではなく黒。`scale.tint` はシステム色で、
+                            // 緑も橙もライト・ダークとも明るい側にあるため、白を乗せると
+                            // 2.2:1 まで落ちる（17pt bold は大文字扱いなので基準は 3:1）。
+                            // 塗りの色は硬い側から水様までの並びを示しているので変えず、
+                            // 前景を反転させる。黒なら茶でも 6:1、緑と橙では 9:1 を超える。
+                            //
+                            // 選んでいない側も、同じ色の文字を薄い同色の上に置いていて
+                            // 読みにくかった。数字は `.primary` にして、色は背景に残す。
+                            .foregroundStyle(isSelected ? Color.black : Color.primary)
                             .background(
-                                isSelected ? scale.tint : scale.tint.opacity(0.13),
+                                // 選んでいない側の色を 0.13 から上げる。数字を `.primary` に
+                                // したぶん、硬い側から水様までの並びを示す色が薄い背景だけに
+                                // 残る。0.13 のままだとライトで 7 つがほぼ同じ灰色に見えて、
+                                // 並びが色でも分かるという `BristolScale.tint` の意図が消える。
+                                isSelected ? scale.tint : scale.tint.opacity(0.26),
                                 in: .circle
                             )
                             .overlay {

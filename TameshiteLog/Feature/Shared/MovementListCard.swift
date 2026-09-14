@@ -66,7 +66,11 @@ struct MovementRow: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
                                 .background(chip.tint.opacity(0.15), in: .capsule)
-                                .foregroundStyle(chip.tint)
+                                // 文字は `.primary`。同じ色を薄い同色の上に置いていたので、
+                                // 黄で 1.5:1、橙で 2.2:1、赤でも 3.6:1 しかなかった。11pt には
+                                // 足りない。強さは背景の色と「腹痛 軽い」という語が伝えるので、
+                                // 色を前景から降ろしても読み取れるものは減らない。
+                                .foregroundStyle(.primary)
                         }
                     }
                 }
