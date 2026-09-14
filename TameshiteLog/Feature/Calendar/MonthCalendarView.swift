@@ -57,6 +57,19 @@ struct MonthCalendarView: View {
                 }
             }
             .tracksCurrentDay($today)
+            // 日付が変わって月もまたいだときだけ、表示月を新しい今月へ動かす。
+            //
+            // `month` は起動時の今月で止まっていた。開いたまま、あるいは眠らせたまま
+            // 月をまたぐと、今日のマスが載っていない先月が開いたままになる。既定で
+            // 開いていただけの月なので、そこに留まる理由がない。
+            //
+            // ただし遡って見ている月は動かさない。またぐ前の今月を見ていた場合に限る、
+            // という条件にしておけば、自分で送った月は自分が送るまでそのまま残る。
+            .onChange(of: today) { previous, current in
+                guard !calendar.isDate(previous, equalTo: current, toGranularity: .month),
+                      calendar.isDate(month, equalTo: previous, toGranularity: .month) else { return }
+                month = calendar.startOfMonth(for: current)
+            }
         }
     }
 

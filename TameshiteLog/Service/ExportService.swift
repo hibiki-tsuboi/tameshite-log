@@ -130,10 +130,24 @@ enum ExportService {
             .joined(separator: "\r\n")
     }
 
+    /// 表計算ソフトが数式として評価してしまう先頭文字。
+    ///
+    /// メモに「- 朝からお腹が痛い」と箇条書きのつもりで書くと、Excel・Numbers・
+    /// Google スプレッドシートはその行を数式として評価し、セルには本文ではなく
+    /// #NAME? が出る。= + @ でも同じで、引用符で囲んでも評価は止まらない。
+    /// 書き出した本人の手元では起きず、渡した相手の画面でだけ本文が消えるので、
+    /// 本人はメモが欠けていることに気づけない。
+    private nonisolated static let formulaPrefixes: Set<Character> = ["=", "+", "-", "@", "\t", "\r"]
+
+    /// 先頭に ' を足して文字列だと伝える。3 つとも ' 自体は表示しない。
+    /// このアプリの CSV に負の数は出ないので、- を巻き込む心配はない。
     private nonisolated static func escape(_ field: String) -> String {
-        let needsQuotes = field.contains { $0 == "," || $0 == "\"" || $0 == "\n" || $0 == "\r" }
-        guard needsQuotes else { return field }
-        return "\"" + field.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+        let isFormula = field.first.map(formulaPrefixes.contains) ?? false
+        let text = isFormula ? "'" + field : field
+        let needsQuotes = isFormula
+            || text.contains { $0 == "," || $0 == "\"" || $0 == "\n" || $0 == "\r" }
+        guard needsQuotes else { return text }
+        return "\"" + text.replacingOccurrences(of: "\"", with: "\"\"") + "\""
     }
 
     private static func number(_ value: Double?) -> String {
