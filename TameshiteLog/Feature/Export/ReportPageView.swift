@@ -114,6 +114,7 @@ struct ReportPageView: View {
         .foregroundStyle(.black)
         .environment(\.colorScheme, .light)
         .environment(\.locale, Formatting.locale)
+        .environment(\.calendar, Formatting.calendar)
         .environment(\.dynamicTypeSize, .large)
     }
 
@@ -516,7 +517,7 @@ struct ReportPageView: View {
     }
 
     private func weekday(_ date: Date) -> String {
-        date.formatted(.dateTime.weekday(.narrow).locale(Formatting.locale))
+        Formatting.weekday(date, .narrow)
     }
 
     private func color(for summary: PhaseSummary) -> Color {

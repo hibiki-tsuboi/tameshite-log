@@ -143,7 +143,7 @@ enum ExportService {
     }
 
     private static func weekday(_ date: Date) -> String {
-        date.formatted(.dateTime.weekday(.abbreviated).locale(Formatting.locale))
+        Formatting.weekday(date, .abbreviated)
     }
 
     /// 表計算ソフトが日付として解釈できる形。画面表示用の `Formatting` とは別物。

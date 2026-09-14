@@ -44,7 +44,10 @@ struct TameshiteLogApp: App {
         WindowGroup {
             RootView()
                 // 画面の文言が日本語なので、DatePicker などシステムが描く部分も日本語に揃える。
+                // 暦も渡す。locale だけだと、端末を和暦にしたとき DatePicker が「令和8年」を
+                // 出す一方で、アプリが書く日付は西暦のままになり、同じ画面で暦が割れる。
                 .environment(\.locale, Formatting.locale)
+                .environment(\.calendar, Formatting.calendar)
                 // アセットの AccentColor はターゲット設定に入れてあるが、iOS では
                 // それだけだと SwiftUI の色が既定の青のままだった。根で一度当てておく。
                 //

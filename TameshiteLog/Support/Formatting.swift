@@ -7,6 +7,38 @@ enum Formatting {
     /// 端末の地域設定が海外でも、画面の中で表記が混ざらないようにするため。
     static let locale = Locale(identifier: "ja_JP")
 
+    /// 暦も固定する。locale だけでは足りない。
+    ///
+    /// `Date.FormatStyle` の calendar の既定は `.autoupdatingCurrent` で、`.locale(_:)` を
+    /// 付けても戻らない。端末の暦法を「和暦」にすると `ja_JP` のまま「令和8年9月14日」になる。
+    /// 一方 CSV の日付列とファイル名は en_US_POSIX の西暦で固定してあるので、同じ 1 回の
+    /// 書き出しで PDF だけ元号になり、渡された側が 2 つの暦を突き合わせることになる。
+    ///
+    /// 「和暦を選んだ人には和暦で」という選び方は取れない。年を持たない `shortDate` や
+    /// `weekdayDate` には元から元号が出ず、CSV も固定なので、どのみち揃わない。
+    ///
+    /// タイムゾーンと週の始まりは端末のものを引き継ぐ。ここで決めたいのは暦法だけで、
+    /// 日曜始まりか月曜始まりかは利用者の地域設定に従うべきものなので。
+    static var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        let current = Calendar.current
+        calendar.locale = locale
+        calendar.timeZone = current.timeZone
+        calendar.firstWeekday = current.firstWeekday
+        return calendar
+    }
+
+    /// locale と暦を当てた日付書式。日付の表示はすべてここを通す。
+    /// 1 か所でも素の `.dateTime` を使うと、そこだけ端末の暦で描かれる。
+    private static func dateStyle(
+        _ build: (Date.FormatStyle) -> Date.FormatStyle
+    ) -> Date.FormatStyle {
+        var style = build(.dateTime)
+        style.locale = locale
+        style.calendar = calendar
+        return style
+    }
+
     /// 平均値など。小数第 1 位まで。
     static func decimal(_ value: Double) -> String {
         value.formatted(.number.precision(.fractionLength(0...1)).locale(locale))
@@ -53,7 +85,12 @@ enum Formatting {
     }
 
     static func time(_ date: Date) -> String {
-        date.formatted(.dateTime.hour().minute().locale(locale))
+        date.formatted(dateStyle { $0.hour().minute() })
+    }
+
+    /// 「火」。曜日だけを書く。紙面と CSV で幅を選べるようにしてある。
+    static func weekday(_ date: Date, _ width: Date.FormatStyle.Symbol.Weekday) -> String {
+        date.formatted(dateStyle { $0.weekday(width) })
     }
 
     /// 「20:41」。その日の時刻でなければ「8/14 20:41」まで出す。
@@ -69,17 +106,22 @@ enum Formatting {
 
     /// 「2026年8月18日」
     static func mediumDate(_ date: Date) -> String {
-        date.formatted(.dateTime.year().month().day().locale(locale))
+        date.formatted(dateStyle { $0.year().month().day() })
+    }
+
+    /// 「2026年9月」。カレンダーの月見出し用。
+    static func monthTitle(_ date: Date) -> String {
+        date.formatted(dateStyle { $0.year().month() })
     }
 
     /// 「8/18」。期間の表示で並べても読みやすい短い形。
     static func shortDate(_ date: Date) -> String {
-        date.formatted(.dateTime.month(.defaultDigits).day().locale(locale))
+        date.formatted(dateStyle { $0.month(.defaultDigits).day() })
     }
 
     /// 「8月18日(火)」
     static func weekdayDate(_ date: Date) -> String {
-        date.formatted(.dateTime.month().day().weekday(.abbreviated).locale(locale))
+        date.formatted(dateStyle { $0.month().day().weekday(.abbreviated) })
     }
 
     /// 「8/18〜8/27」「8/18〜（継続中）」

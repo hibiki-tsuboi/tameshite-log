@@ -105,7 +105,7 @@ struct MonthCalendarView: View {
             .accessibilityLabel("前の月")
 
             Spacer()
-            Text(month.formatted(.dateTime.year().month()))
+            Text(Formatting.monthTitle(month))
                 .font(.system(.title3, design: .rounded, weight: .semibold))
                 .contentTransition(.numericText())
             Spacer()

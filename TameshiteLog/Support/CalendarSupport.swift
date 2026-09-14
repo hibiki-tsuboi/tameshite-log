@@ -33,8 +33,12 @@ extension Calendar {
     }
 
     /// その月の 1 日。
+    ///
+    /// `.era` も渡す。和暦では年が元号の中での通し番号なので、元号を落とすと ICU が
+    /// 現元号で補い、平成31年4月が令和31年（2049年）4月になって戻ってくる。
+    /// `monthGridDays(for:)` はここを通るため、月ヘッダと並ぶ日付がずれる。
     func startOfMonth(for date: Date) -> Date {
-        self.date(from: dateComponents([.year, .month], from: date)) ?? startOfDay(for: date)
+        self.date(from: dateComponents([.era, .year, .month], from: date)) ?? startOfDay(for: date)
     }
 
     /// 月グリッドに必要な、週の頭で揃えた日付の並び。
